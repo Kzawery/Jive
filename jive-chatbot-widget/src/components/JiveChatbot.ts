@@ -3,11 +3,22 @@
  * 
  * A customizable chatbot widget that can be embedded in any website
  */
+import type { Socket } from 'socket.io-client';
+
+declare global {
+  interface Window {
+    io: any;
+  }
+}
+
 export class JiveChatbot extends HTMLElement {
   private shadow: ShadowRoot;
   private container: HTMLDivElement;
   private chatContainer: HTMLDivElement;
   private inputContainer: HTMLDivElement;
+  private socket: Socket | null = null;
+  private typingTimeout: ReturnType<typeof setTimeout> | null = null;
+  private socketConnected = false;
   
   // Define observed attributes for component configuration
   static get observedAttributes(): string[] {
@@ -15,6 +26,7 @@ export class JiveChatbot extends HTMLElement {
       'theme',
       'position',
       'api-endpoint',
+      'socket-endpoint',
       'welcome-message',
       'company-logo',
       'company-name'
@@ -182,6 +194,69 @@ export class JiveChatbot extends HTMLElement {
         color: white;
       }
       
+      .typing-indicator {
+        display: flex;
+        align-items: center;
+        align-self: flex-start;
+        background-color: var(--secondary-color);
+        padding: 12px;
+        border-radius: var(--border-radius);
+        margin-top: 8px;
+      }
+      
+      .typing-indicator span {
+        height: 8px;
+        width: 8px;
+        background-color: #666;
+        border-radius: 50%;
+        display: inline-block;
+        margin: 0 2px;
+        opacity: 0.4;
+      }
+      
+      .typing-indicator span:nth-child(1) {
+        animation: blink 1s infinite 0.2s;
+      }
+      
+      .typing-indicator span:nth-child(2) {
+        animation: blink 1s infinite 0.4s;
+      }
+      
+      .typing-indicator span:nth-child(3) {
+        animation: blink 1s infinite 0.6s;
+      }
+      
+      @keyframes blink {
+        0%, 100% { opacity: 0.4; }
+        50% { opacity: 1; }
+      }
+      
+      .connection-status {
+        text-align: center;
+        font-size: 12px;
+        padding: 4px;
+        color: #999;
+        background-color: #f8f8f8;
+      }
+      
+      .connection-status.connected {
+        color: #4caf50;
+      }
+      
+      .connection-status.disconnected {
+        color: #f44336;
+      }
+      
+      .minimized {
+        height: 50px;
+        overflow: hidden;
+      }
+      
+      .minimized .jive-chatbot-messages,
+      .minimized .jive-chatbot-input {
+        display: none;
+      }
+      
       @keyframes fadeIn {
         from { opacity: 0; transform: translateY(10px); }
         to { opacity: 1; transform: translateY(0); }
@@ -227,6 +302,12 @@ export class JiveChatbot extends HTMLElement {
     const input = document.createElement('input');
     input.type = 'text';
     input.placeholder = 'Type your message...';
+    
+    // Add input event for typing indicator
+    input.addEventListener('input', () => {
+      this.handleTypingIndicator();
+    });
+    
     input.addEventListener('keypress', (e) => {
       if (e.key === 'Enter') {
         this.sendMessage();
@@ -251,16 +332,175 @@ export class JiveChatbot extends HTMLElement {
   }
   
   /**
+   * Initialize WebSocket connection
+   */
+  private initWebSocket(): void {
+    const socketEndpoint = this.getAttribute('socket-endpoint') || 'http://localhost:3000';
+    
+    // Check if Socket.IO is available
+    if (typeof window.io === 'undefined') {
+      console.error('Socket.IO client is not available. Make sure to include socket.io-client before loading this component.');
+      this.addSystemMessage('Chat connection unavailable. Socket.IO client not loaded.');
+      return;
+    }
+    
+    try {
+      this.socket = window.io(socketEndpoint);
+      
+      if (this.socket) {
+        // Connection events
+        this.socket.on('connect', () => {
+          console.log('WebSocket connected');
+          this.socketConnected = true;
+          this.updateConnectionStatus(true);
+        });
+        
+        // Message events
+        this.socket.on('message', (data: any) => {
+          // Process incoming message data
+          this.handleIncomingMessage(data);
+        });
+        
+        this.socket.on('typing', () => {
+          this.showTypingIndicator();
+        });
+        
+        this.socket.on('disconnect', () => {
+          console.log('WebSocket disconnected');
+          this.socketConnected = false;
+          this.updateConnectionStatus(false);
+        });
+        
+        // Error handling
+        this.socket.on('error', (error: any) => {
+          console.error('WebSocket error:', error);
+          this.addSystemMessage(`Error: ${error.message || 'Connection error'}`);
+        });
+      }
+    } catch (error) {
+      console.error('Failed to connect to WebSocket:', error);
+      this.addSystemMessage('Failed to connect to chat server');
+    }
+  }
+  
+  /**
+   * Update connection status indicator
+   */
+  private updateConnectionStatus(connected: boolean): void {
+    // Remove existing status element if any
+    const existingStatus = this.shadow.querySelector('.connection-status');
+    if (existingStatus) {
+      existingStatus.remove();
+    }
+    
+    // Create status element
+    const statusElement = document.createElement('div');
+    statusElement.className = `connection-status ${connected ? 'connected' : 'disconnected'}`;
+    statusElement.textContent = connected ? 'Connected' : 'Disconnected';
+    
+    // Insert after header
+    const header = this.shadow.querySelector('.jive-chatbot-header');
+    if (header && header.nextSibling) {
+      this.container.insertBefore(statusElement, header.nextSibling);
+    } else {
+      this.container.appendChild(statusElement);
+    }
+    
+    // Remove after a few seconds if connected
+    if (connected) {
+      setTimeout(() => {
+        statusElement.remove();
+      }, 3000);
+    }
+  }
+  
+  /**
+   * Handle typing indicator
+   */
+  private handleTypingIndicator(): void {
+    if (!this.socket || !this.socketConnected) return;
+    
+    // Clear existing timeout
+    if (this.typingTimeout) {
+      clearTimeout(this.typingTimeout);
+    }
+    
+    // Send typing event
+    this.socket.emit('typing', { isTyping: true });
+    
+    // Set timeout to clear typing indicator
+    this.typingTimeout = setTimeout(() => {
+      if (this.socket) {
+        this.socket.emit('typing', { isTyping: false });
+      }
+    }, 2000);
+  }
+  
+  /**
+   * Show typing indicator in chat
+   */
+  private showTypingIndicator(): HTMLDivElement {
+    // Remove any existing typing indicator
+    this.hideTypingIndicator();
+    
+    // Create typing indicator
+    const indicator = document.createElement('div');
+    indicator.className = 'typing-indicator';
+    indicator.innerHTML = '<span></span><span></span><span></span>';
+    
+    this.chatContainer.appendChild(indicator);
+    this.scrollToBottom();
+    
+    return indicator;
+  }
+  
+  /**
+   * Hide typing indicator
+   */
+  private hideTypingIndicator(): void {
+    const indicator = this.shadow.querySelector('.typing-indicator');
+    if (indicator) {
+      indicator.remove();
+    }
+  }
+  
+  /**
+   * Handle incoming message from WebSocket
+   */
+  private handleIncomingMessage(data: any): void {
+    // Hide typing indicator if present
+    this.hideTypingIndicator();
+    
+    // Add message to chat
+    if (data.type === 'bot') {
+      this.addBotMessage(data.text);
+    } else if (data.type === 'system') {
+      this.addSystemMessage(data.text);
+    }
+  }
+  
+  /**
    * Public method to programmatically send a message
    */
   public sendMessageProgrammatically(text: string): void {
     if (text && text.trim()) {
       this.addUserMessage(text);
       
-      // Simulate response (will be replaced with actual API call)
-      setTimeout(() => {
-        this.addBotMessage('This is a placeholder response. The actual integration with the chatbot API will be implemented soon.');
-      }, 1000);
+      // Send message via WebSocket if connected
+      if (this.socket && this.socketConnected) {
+        this.socket.emit('message', {
+          text,
+          timestamp: Date.now()
+        });
+        
+        // Show typing indicator
+        this.showTypingIndicator();
+      } else {
+        // Fallback if not connected
+        setTimeout(() => {
+          this.addBotMessage('Sorry, I\'m not connected to the server. Please try again later.');
+        }, 1000);
+      }
       
       // Dispatch event
       this.dispatchEvent(new CustomEvent('message-sent', {
@@ -316,6 +556,23 @@ export class JiveChatbot extends HTMLElement {
   }
   
   /**
+   * Add a system message to the chat
+   */
+  private addSystemMessage(text: string): void {
+    const message = document.createElement('div');
+    message.className = 'jive-message jive-message-system';
+    message.style.alignSelf = 'center';
+    message.style.backgroundColor = '#ffe8e8';
+    message.style.color = '#d32f2f';
+    message.style.fontSize = '12px';
+    message.style.padding = '8px 12px';
+    message.textContent = text;
+    
+    this.chatContainer.appendChild(message);
+    this.scrollToBottom();
+  }
+  
+  /**
    * Scroll the chat container to the bottom
    */
   private scrollToBottom(): void {
@@ -326,12 +583,31 @@ export class JiveChatbot extends HTMLElement {
    * Called when the element is inserted into the DOM
    */
   connectedCallback(): void {
+    // Initialize WebSocket connection
+    this.initWebSocket();
+    
     // Add welcome message if provided
     const welcomeMessage = this.getAttribute('welcome-message');
     if (welcomeMessage) {
       this.addBotMessage(welcomeMessage);
     } else {
       this.addBotMessage('Hello! How can I help you today?');
+    }
+  }
+  
+  /**
+   * Called when the element is removed from the DOM
+   */
+  disconnectedCallback(): void {
+    // Clean up WebSocket connection
+    if (this.socket) {
+      this.socket.disconnect();
+      this.socket = null;
+    }
+    
+    // Clear any timeouts
+    if (this.typingTimeout) {
+      clearTimeout(this.typingTimeout);
     }
   }
   
@@ -347,6 +623,14 @@ export class JiveChatbot extends HTMLElement {
         break;
       case 'position':
         this.updatePosition(newValue);
+        break;
+      case 'socket-endpoint':
+        // Reconnect WebSocket if endpoint changes
+        if (this.socket) {
+          this.socket.disconnect();
+          this.socket = null;
+        }
+        this.initWebSocket();
         break;
       case 'welcome-message':
         // Only update welcome message if the chat is empty

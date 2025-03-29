@@ -2,6 +2,7 @@ import typescript from 'rollup-plugin-typescript2';
 import { terser } from 'rollup-plugin-terser';
 import resolve from '@rollup/plugin-node-resolve';
 import commonjs from '@rollup/plugin-commonjs';
+import nodePolyfills from 'rollup-plugin-polyfill-node';
 
 export default {
   input: 'src/index.ts',
@@ -24,7 +25,10 @@ export default {
       format: 'umd',
       name: 'JiveChatbot',
       sourcemap: true,
-      entryFileNames: 'jive-chatbot.umd.js'
+      entryFileNames: 'jive-chatbot.umd.js',
+      globals: {
+        'socket.io-client': 'io'
+      }
     },
     {
       dir: 'dist',
@@ -32,11 +36,18 @@ export default {
       name: 'JiveChatbot',
       sourcemap: true,
       entryFileNames: 'jive-chatbot.umd.min.js',
+      globals: {
+        'socket.io-client': 'io'
+      },
       plugins: [terser()]
     }
   ],
   plugins: [
-    resolve(),
+    nodePolyfills(),
+    resolve({
+      browser: true,
+      preferBuiltins: false
+    }),
     commonjs(),
     typescript({
       tsconfig: './tsconfig.json',
@@ -44,5 +55,7 @@ export default {
     })
   ],
   // Bundle all dynamic imports
-  inlineDynamicImports: true
+  inlineDynamicImports: true,
+  // Mark socket.io-client as external
+  external: ['socket.io-client']
 }; 

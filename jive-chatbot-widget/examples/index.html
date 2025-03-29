@@ -128,6 +128,11 @@
           <label for="secondary-color">Secondary Color</label>
           <input type="color" id="secondary-color" value="#f2f2f2">
         </div>
+        
+        <div class="control-group">
+          <label for="socket-endpoint">WebSocket Endpoint</label>
+          <input type="text" id="socket-endpoint" value="http://localhost:3000">
+        </div>
       </div>
       
       <button id="apply-settings">Apply Settings</button>
@@ -152,7 +157,37 @@
         &lt;/jive-chatbot&gt;
       </div>
     </div>
+    
+    <div class="demo-section">
+      <h2>WebSocket Testing</h2>
+      <button id="test-direct-connection">Test Direct WebSocket Connection</button>
+      <button id="test-chatbot-connection">Test Chatbot WebSocket Connection</button>
+      <button id="debug-socket-io">Debug Socket.IO</button>
+      <div class="websocket-status">Status: Not connected</div>
+    </div>
   </div>
+  
+  <!-- Include Socket.IO client for direct usage -->
+  <script src="https://cdn.socket.io/4.7.4/socket.io.min.js" integrity="sha384-Gr6Lu2Ajx28mzwyVR8CFkULdCU7kMlZ9UthllibdOSo6qAiN+yXNHqtgdTvFXMT4" crossorigin="anonymous"></script>
+  
+  <!-- Ensure Socket.IO is loaded globally -->
+  <script>
+    // Verify Socket.IO is available globally
+    if (typeof io === 'undefined') {
+      console.error('Socket.IO client failed to load. The chatbot may not function properly.');
+      // Create a basic stub to prevent errors
+      window.io = function() {
+        console.warn('Using Socket.IO stub - connection will not work');
+        return {
+          on: function() {},
+          emit: function() {},
+          disconnect: function() {}
+        };
+      };
+    } else {
+      console.log('Socket.IO client loaded successfully');
+    }
+  </script>
   
   <!-- Include the chatbot component -->
   <script src="../dist/jive-chatbot.umd.js"></script>
@@ -177,12 +212,46 @@
       const clearLogButton = document.getElementById('clear-log');
       const installationCode = document.getElementById('installation-code');
       
+      // Add WebSocket direct testing
+      const testDirectButton = document.getElementById('test-direct-connection');
+      const testChatbotButton = document.getElementById('test-chatbot-connection');
+      const debugSocketIOButton = document.getElementById('debug-socket-io');
+      const websocketStatus = document.querySelector('.websocket-status');
+      let directSocket = null;
+      
+      // Add debug button for Socket.IO
+      debugSocketIOButton.addEventListener('click', () => {
+        // Log the Socket.IO object details
+        if (typeof window.io !== 'undefined') {
+          logEvent(`Socket.IO is available globally: ${typeof window.io}`);
+          
+          // Try to create a connection object (without connecting)
+          try {
+            const socketTest = window.io('http://localhost:3000', { autoConnect: false });
+            logEvent(`Socket.IO connection object created: ${!!socketTest}`);
+            logEvent(`Socket.IO connection methods: ${Object.keys(socketTest).join(', ')}`);
+          } catch (err) {
+            logEvent(`Error creating Socket.IO connection: ${err.message}`);
+          }
+        } else {
+          logEvent('Socket.IO is NOT available globally');
+        }
+        
+        // Check if io is available directly
+        if (typeof io !== 'undefined') {
+          logEvent('io is available directly in the global scope');
+        } else {
+          logEvent('io is NOT available directly in the global scope');
+        }
+      });
+      
       // Apply settings button
       applyButton.addEventListener('click', () => {
         // Update attributes
         chatbot.setAttribute('company-name', companyNameInput.value);
         chatbot.setAttribute('position', positionSelect.value);
         chatbot.setAttribute('welcome-message', welcomeMessageInput.value);
+        chatbot.setAttribute('socket-endpoint', document.getElementById('socket-endpoint').value);
         
         // Update theme
         const theme = `${primaryColorInput.value}:${secondaryColorInput.value}`;
@@ -241,6 +310,72 @@
       // Initialize with current values
       updateInstallationCode();
       logEvent('Demo initialized');
+      
+      // Test direct WebSocket connection
+      testDirectButton.addEventListener('click', () => {
+        const endpoint = document.getElementById('socket-endpoint').value;
+        
+        if (directSocket) {
+          directSocket.disconnect();
+          directSocket = null;
+          websocketStatus.textContent = 'Status: Disconnected';
+          testDirectButton.textContent = 'Test Direct WebSocket Connection';
+          return;
+        }
+        
+        try {
+          directSocket = io(endpoint);
+          
+          directSocket.on('connect', () => {
+            websocketStatus.textContent = `Status: Connected directly (${directSocket.id})`;
+            testDirectButton.textContent = 'Disconnect Direct WebSocket';
+            logEvent('WebSocket connected directly');
+            
+            // Send a test message
+            directSocket.emit('message', { 
+              text: 'Hello from direct connection',
+              timestamp: Date.now()
+            });
+          });
+          
+          directSocket.on('message', (data) => {
+            logEvent(`Direct WS received: ${JSON.stringify(data)}`);
+          });
+          
+          directSocket.on('disconnect', () => {
+            websocketStatus.textContent = 'Status: Disconnected';
+            testDirectButton.textContent = 'Test Direct WebSocket Connection';
+            logEvent('WebSocket disconnected directly');
+          });
+          
+          directSocket.on('error', (error) => {
+            websocketStatus.textContent = `Status: Error - ${error.message || 'Unknown'}`;
+            logEvent(`WebSocket error: ${error.message || 'Unknown'}`);
+          });
+          
+        } catch (error) {
+          websocketStatus.textContent = `Status: Error - ${error.message || 'Unknown'}`;
+          logEvent(`WebSocket connection error: ${error.message || 'Unknown'}`);
+        }
+      });
+      
+      // Test chatbot WebSocket connection by toggling it
+      testChatbotButton.addEventListener('click', () => {
+        const chatbotSocket = chatbot.getAttribute('socket-endpoint');
+        
+        if (chatbotSocket) {
+          // Disconnect by setting empty endpoint
+          chatbot.removeAttribute('socket-endpoint');
+          testChatbotButton.textContent = 'Connect Chatbot WebSocket';
+          logEvent('Chatbot WebSocket disconnected');
+        } else {
+          // Connect by setting endpoint
+          const endpoint = document.getElementById('socket-endpoint').value;
+          chatbot.setAttribute('socket-endpoint', endpoint);
+          testChatbotButton.textContent = 'Disconnect Chatbot WebSocket';
+          logEvent('Chatbot WebSocket connection requested');
+        }
+      });
     });
   </script>
 </body>
