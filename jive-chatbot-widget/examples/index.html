@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jive Chatbot Widget Demo</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 20px;
+      color: #333;
+      line-height: 1.6;
+    }
+    
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    
+    h1 {
+      color: #4a90e2;
+      margin-bottom: 10px;
+    }
+    
+    .demo-section {
+      margin: 40px 0;
+      padding: 20px;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      background-color: #f9f9f9;
+    }
+    
+    .control-panel {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+    
+    .control-group {
+      margin-bottom: 15px;
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    
+    input, select {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    
+    button {
+      background-color: #4a90e2;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    
+    button:hover {
+      background-color: #3a80d2;
+    }
+    
+    .code-example {
+      background-color: #f5f5f5;
+      padding: 15px;
+      border-radius: 4px;
+      font-family: monospace;
+      overflow-x: auto;
+      margin: 10px 0;
+    }
+    
+    .event-log {
+      height: 150px;
+      overflow-y: auto;
+      padding: 10px;
+      background-color: #2d2d2d;
+      color: #e0e0e0;
+      font-family: monospace;
+      border-radius: 4px;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Jive Chatbot Widget Demo</h1>
+    <p>This demo page allows you to experiment with the Jive Chatbot Web Component and its customization options.</p>
+    
+    <div class="demo-section">
+      <h2>Customize Chatbot</h2>
+      <div class="control-panel">
+        <div class="control-group">
+          <label for="company-name">Company Name</label>
+          <input type="text" id="company-name" value="Jive Support">
+        </div>
+        
+        <div class="control-group">
+          <label for="position">Position</label>
+          <select id="position">
+            <option value="bottom-right">Bottom Right</option>
+            <option value="bottom-left">Bottom Left</option>
+            <option value="top-right">Top Right</option>
+            <option value="top-left">Top Left</option>
+          </select>
+        </div>
+        
+        <div class="control-group">
+          <label for="welcome-message">Welcome Message</label>
+          <input type="text" id="welcome-message" value="Hello! How can I help you today?">
+        </div>
+        
+        <div class="control-group">
+          <label for="primary-color">Primary Color</label>
+          <input type="color" id="primary-color" value="#4a90e2">
+        </div>
+        
+        <div class="control-group">
+          <label for="secondary-color">Secondary Color</label>
+          <input type="color" id="secondary-color" value="#f2f2f2">
+        </div>
+      </div>
+      
+      <button id="apply-settings">Apply Settings</button>
+      <button id="send-message">Send Test Message</button>
+    </div>
+    
+    <div class="demo-section">
+      <h2>Event Log</h2>
+      <div class="event-log" id="event-log"></div>
+      <button id="clear-log">Clear Log</button>
+    </div>
+    
+    <div class="demo-section">
+      <h2>Installation Code</h2>
+      <p>Copy this code to add the Jive Chatbot to your website:</p>
+      <div class="code-example" id="installation-code">
+        &lt;script src="dist/jive-chatbot.umd.min.js"&gt;&lt;/script&gt;
+        &lt;jive-chatbot 
+          api-endpoint="https://your-api-endpoint.com" 
+          company-name="Jive Support" 
+          welcome-message="Hello! How can I help you today?"&gt;
+        &lt;/jive-chatbot&gt;
+      </div>
+    </div>
+  </div>
+  
+  <!-- Include the chatbot component -->
+  <script src="../dist/jive-chatbot.umd.js"></script>
+  
+  <!-- Add chatbot instance -->
+  <jive-chatbot id="demo-chatbot" api-endpoint="https://demo-api.example.com"></jive-chatbot>
+  
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // Get reference to chatbot element
+      const chatbot = document.getElementById('demo-chatbot');
+      
+      // Get UI elements
+      const companyNameInput = document.getElementById('company-name');
+      const positionSelect = document.getElementById('position');
+      const welcomeMessageInput = document.getElementById('welcome-message');
+      const primaryColorInput = document.getElementById('primary-color');
+      const secondaryColorInput = document.getElementById('secondary-color');
+      const applyButton = document.getElementById('apply-settings');
+      const sendMessageButton = document.getElementById('send-message');
+      const eventLog = document.getElementById('event-log');
+      const clearLogButton = document.getElementById('clear-log');
+      const installationCode = document.getElementById('installation-code');
+      
+      // Apply settings button
+      applyButton.addEventListener('click', () => {
+        // Update attributes
+        chatbot.setAttribute('company-name', companyNameInput.value);
+        chatbot.setAttribute('position', positionSelect.value);
+        chatbot.setAttribute('welcome-message', welcomeMessageInput.value);
+        
+        // Update theme
+        const theme = `${primaryColorInput.value}:${secondaryColorInput.value}`;
+        chatbot.setAttribute('theme', theme);
+        
+        // Update installation code
+        updateInstallationCode();
+        
+        // Log event
+        logEvent('Settings applied');
+      });
+      
+      // Send test message
+      sendMessageButton.addEventListener('click', () => {
+        chatbot.sendMessageProgrammatically('This is a test message sent programmatically');
+        logEvent('Test message sent');
+      });
+      
+      // Clear log
+      clearLogButton.addEventListener('click', () => {
+        eventLog.innerHTML = '';
+      });
+      
+      // Listen for chatbot events
+      chatbot.addEventListener('message-sent', (event) => {
+        logEvent(`Message sent: ${event.detail.message}`);
+      });
+      
+      chatbot.addEventListener('message-received', (event) => {
+        logEvent(`Message received: ${event.detail.message}`);
+      });
+      
+      // Update installation code
+      function updateInstallationCode() {
+        const code = `&lt;script src="dist/jive-chatbot.umd.min.js"&gt;&lt;/script&gt;
+&lt;jive-chatbot 
+  api-endpoint="https://your-api-endpoint.com" 
+  company-name="${companyNameInput.value}" 
+  position="${positionSelect.value}"
+  theme="${primaryColorInput.value}:${secondaryColorInput.value}"
+  welcome-message="${welcomeMessageInput.value}"&gt;
+&lt;/jive-chatbot&gt;`;
+        
+        installationCode.innerHTML = code;
+      }
+      
+      // Log event with timestamp
+      function logEvent(message) {
+        const timestamp = new Date().toLocaleTimeString();
+        const logEntry = document.createElement('div');
+        logEntry.textContent = `[${timestamp}] ${message}`;
+        eventLog.appendChild(logEntry);
+        eventLog.scrollTop = eventLog.scrollHeight;
+      }
+      
+      // Initialize with current values
+      updateInstallationCode();
+      logEvent('Demo initialized');
+    });
+  </script>
+</body>
+</html> 
