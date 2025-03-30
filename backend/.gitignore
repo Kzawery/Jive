@@ -54,3 +54,4 @@ typings/
 
 # Build output
 dist/ 
+uploads/
