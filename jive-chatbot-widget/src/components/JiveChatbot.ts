@@ -4,6 +4,7 @@
  * A customizable chatbot widget that can be embedded in any website
  */
 import type { Socket } from 'socket.io-client';
+import { marked } from 'marked';
 
 declare global {
   interface Window {
@@ -180,12 +181,158 @@ export class JiveChatbot extends HTMLElement {
         padding: 12px;
         border-radius: var(--border-radius);
         animation: fadeIn 0.3s;
+        line-height: 1.5;
+      }
+      
+      .jive-message pre {
+        background-color: #f5f5f5;
+        padding: 12px;
+        border-radius: 4px;
+        overflow-x: auto;
+        margin: 8px 0;
+        font-size: 14px;
+      }
+      
+      .jive-message code {
+        font-family: 'Courier New', Courier, monospace;
+        font-size: 14px;
+      }
+      
+      .jive-message p {
+        margin: 8px 0;
+      }
+      
+      .jive-message ul, .jive-message ol {
+        margin: 8px 0;
+        padding-left: 20px;
+      }
+      
+      .jive-message a {
+        color: #4a90e2;
+        text-decoration: none;
+      }
+      
+      .jive-message a:hover {
+        text-decoration: underline;
+      }
+      
+      .jive-message blockquote {
+        border-left: 4px solid #ddd;
+        margin: 8px 0;
+        padding-left: 10px;
+        color: #666;
+      }
+      
+      .jive-message table {
+        border-collapse: collapse;
+        width: 100%;
+        margin: 8px 0;
+      }
+      
+      .jive-message th, .jive-message td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        text-align: left;
+      }
+      
+      .jive-message th {
+        background-color: #f5f5f5;
       }
       
       .jive-message-bot {
         align-self: flex-start;
         background-color: var(--secondary-color);
         color: var(--text-color);
+      }
+      
+      .jive-message-bot strong {
+        font-weight: 600;
+      }
+      
+      .jive-message-bot em {
+        font-style: italic;
+      }
+      
+      .jive-message-bot ul, .jive-message-bot ol {
+        margin: 8px 0;
+        padding-left: 24px;
+      }
+      
+      .jive-message-bot li {
+        margin: 4px 0;
+      }
+      
+      .jive-message-bot blockquote {
+        border-left: 4px solid #ddd;
+        margin: 8px 0;
+        padding: 4px 12px;
+        color: #666;
+      }
+      
+      .jive-message-bot h1, 
+      .jive-message-bot h2, 
+      .jive-message-bot h3, 
+      .jive-message-bot h4, 
+      .jive-message-bot h5, 
+      .jive-message-bot h6 {
+        margin: 16px 0 8px 0;
+        font-weight: 600;
+        line-height: 1.25;
+      }
+      
+      .jive-message-bot h1 { font-size: 1.5em; }
+      .jive-message-bot h2 { font-size: 1.3em; }
+      .jive-message-bot h3 { font-size: 1.2em; }
+      .jive-message-bot h4 { font-size: 1.1em; }
+      .jive-message-bot h5 { font-size: 1em; }
+      .jive-message-bot h6 { font-size: 0.9em; }
+      
+      .jive-message-bot a {
+        color: #4a90e2;
+        text-decoration: none;
+      }
+      
+      .jive-message-bot a:hover {
+        text-decoration: underline;
+      }
+      
+      .jive-message-bot table {
+        border-collapse: collapse;
+        width: 100%;
+        margin: 8px 0;
+        font-size: 14px;
+      }
+      
+      .jive-message-bot th,
+      .jive-message-bot td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        text-align: left;
+      }
+      
+      .jive-message-bot th {
+        background-color: #f5f5f5;
+        font-weight: 600;
+      }
+      
+      .jive-message-bot hr {
+        border: none;
+        border-top: 1px solid #ddd;
+        margin: 16px 0;
+      }
+      
+      .jive-message-bot img {
+        max-width: 100%;
+        height: auto;
+        border-radius: 4px;
+        margin: 8px 0;
+      }
+      
+      .jive-message-bot code:not(pre code) {
+        background-color: rgba(0, 0, 0, 0.05);
+        padding: 2px 4px;
+        border-radius: 3px;
+        font-size: 0.9em;
       }
       
       .jive-message-user {
@@ -530,7 +677,7 @@ export class JiveChatbot extends HTMLElement {
   private addUserMessage(text: string): void {
     const message = document.createElement('div');
     message.className = 'jive-message jive-message-user';
-    message.textContent = text;
+    message.textContent = text; // User messages don't need markdown
     
     this.chatContainer.appendChild(message);
     this.scrollToBottom();
@@ -539,20 +686,42 @@ export class JiveChatbot extends HTMLElement {
   /**
    * Add a bot message to the chat
    */
-  private addBotMessage(text: string): void {
+  private async addBotMessage(text: string): Promise<void> {
     const message = document.createElement('div');
     message.className = 'jive-message jive-message-bot';
-    message.textContent = text;
     
-    this.chatContainer.appendChild(message);
-    this.scrollToBottom();
-    
-    // Dispatch event
-    this.dispatchEvent(new CustomEvent('message-received', {
-      bubbles: true,
-      composed: true,
-      detail: { message: text }
-    }));
+    try {
+      // Convert markdown to HTML with proper configuration
+      const html = await marked.parse(text, {
+        breaks: true,  // Enable line breaks
+        gfm: true,     // Enable GitHub Flavored Markdown
+        async: true    // Use async parsing
+      });
+      
+      message.innerHTML = html;
+      
+      // Add syntax highlighting for code blocks
+      const codeBlocks = message.querySelectorAll('pre code');
+      codeBlocks.forEach((block) => {
+        block.classList.add('language-javascript');
+      });
+      
+      this.chatContainer.appendChild(message);
+      this.scrollToBottom();
+      
+      // Dispatch event
+      this.dispatchEvent(new CustomEvent('message-received', {
+        bubbles: true,
+        composed: true,
+        detail: { message: text }
+      }));
+    } catch (error) {
+      console.error('Error parsing markdown:', error);
+      // Fallback to plain text if markdown parsing fails
+      message.textContent = text;
+      this.chatContainer.appendChild(message);
+      this.scrollToBottom();
+    }
   }
   
   /**
@@ -566,7 +735,7 @@ export class JiveChatbot extends HTMLElement {
     message.style.color = '#d32f2f';
     message.style.fontSize = '12px';
     message.style.padding = '8px 12px';
-    message.textContent = text;
+    message.textContent = text; // System messages don't need markdown
     
     this.chatContainer.appendChild(message);
     this.scrollToBottom();

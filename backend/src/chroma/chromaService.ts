@@ -3,6 +3,7 @@ import { VoyageEmbeddings } from "@langchain/community/embeddings/voyage";
 import { Chroma } from "@langchain/community/vectorstores/chroma";
 import { Document } from "@langchain/core/documents";
 import { ChatAnthropic } from "@langchain/anthropic";
+import path from 'path';
 
 export class ChromaService {
   private client: ChromaClient;
@@ -11,6 +12,7 @@ export class ChromaService {
   private llm: ChatAnthropic;
 
   constructor() {
+    // Initialize Chroma client with persistence
     this.client = new ChromaClient({
       path: process.env.CHROMA_SERVER_URL || "http://localhost:8000"
     });
@@ -30,6 +32,7 @@ export class ChromaService {
   }
 
   async initialize() {
+    // Initialize vector store with persistence
     this.vectorStore = await Chroma.fromTexts(
       [], // Initial empty texts
       [], // Initial empty metadata
