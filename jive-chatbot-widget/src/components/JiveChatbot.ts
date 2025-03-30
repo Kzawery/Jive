@@ -5,6 +5,7 @@
  */
 import type { Socket } from 'socket.io-client';
 import { marked } from 'marked';
+import DOMPurify from 'dompurify';
 
 declare global {
   interface Window {
@@ -278,14 +279,43 @@ export class JiveChatbot extends HTMLElement {
         margin: 16px 0 8px 0;
         font-weight: 600;
         line-height: 1.25;
+        color: var(--text-color);
       }
       
-      .jive-message-bot h1 { font-size: 1.5em; }
-      .jive-message-bot h2 { font-size: 1.3em; }
-      .jive-message-bot h3 { font-size: 1.2em; }
-      .jive-message-bot h4 { font-size: 1.1em; }
-      .jive-message-bot h5 { font-size: 1em; }
-      .jive-message-bot h6 { font-size: 0.9em; }
+      .jive-message-bot h1 { 
+        font-size: 1.5em;
+        margin-top: 24px;
+      }
+      
+      .jive-message-bot h2 { 
+        font-size: 1.3em;
+        margin-top: 20px;
+      }
+      
+      .jive-message-bot h3 { 
+        font-size: 1.2em;
+        margin-top: 16px;
+      }
+      
+      .jive-message-bot h4 { 
+        font-size: 1.1em;
+        margin-top: 12px;
+      }
+      
+      .jive-message-bot h5 { 
+        font-size: 1em;
+        margin-top: 8px;
+      }
+      
+      .jive-message-bot h6 { 
+        font-size: 0.9em;
+        margin-top: 8px;
+      }
+      
+      .jive-message-bot p {
+        margin: 8px 0;
+        line-height: 1.5;
+      }
       
       .jive-message-bot a {
         color: #4a90e2;
@@ -336,9 +366,105 @@ export class JiveChatbot extends HTMLElement {
       }
       
       .jive-message-user {
-        align-self: flex-end;
         background-color: var(--primary-color);
         color: white;
+        padding: 12px 16px;
+        border-radius: 16px 16px 0 16px;
+        max-width: 80%;
+        margin-left: auto;
+        margin-bottom: 8px;
+        animation: slideIn 0.3s ease-out;
+      }
+      
+      .jive-message-user h1, 
+      .jive-message-user h2, 
+      .jive-message-user h3, 
+      .jive-message-user h4, 
+      .jive-message-user h5, 
+      .jive-message-user h6 {
+        color: white;
+        margin: 16px 0 8px 0;
+        font-weight: 600;
+        line-height: 1.25;
+      }
+      
+      .jive-message-user h1 { font-size: 1.5em; margin-top: 24px; }
+      .jive-message-user h2 { font-size: 1.3em; margin-top: 20px; }
+      .jive-message-user h3 { font-size: 1.2em; margin-top: 16px; }
+      .jive-message-user h4 { font-size: 1.1em; margin-top: 12px; }
+      .jive-message-user h5 { font-size: 1em; margin-top: 8px; }
+      .jive-message-user h6 { font-size: 0.9em; margin-top: 8px; }
+
+      .jive-message-user p {
+        margin: 8px 0;
+        line-height: 1.5;
+      }
+
+      .jive-message-user ul, 
+      .jive-message-user ol {
+        margin: 8px 0;
+        padding-left: 24px;
+      }
+
+      .jive-message-user li {
+        margin: 4px 0;
+      }
+
+      .jive-message-user strong {
+        font-weight: 600;
+      }
+
+      .jive-message-user em {
+        font-style: italic;
+      }
+
+      .jive-message-user code {
+        background-color: rgba(255, 255, 255, 0.1);
+        padding: 2px 4px;
+        border-radius: 4px;
+        font-family: monospace;
+      }
+
+      .jive-message-user pre {
+        background-color: rgba(255, 255, 255, 0.1);
+        padding: 12px;
+        border-radius: 8px;
+        overflow-x: auto;
+        margin: 8px 0;
+      }
+
+      .jive-message-user pre code {
+        background-color: transparent;
+        padding: 0;
+      }
+
+      .jive-message-user blockquote {
+        border-left: 3px solid rgba(255, 255, 255, 0.5);
+        margin: 8px 0;
+        padding-left: 12px;
+        color: rgba(255, 255, 255, 0.9);
+      }
+
+      .jive-message-user a {
+        color: white;
+        text-decoration: underline;
+      }
+
+      .jive-message-user table {
+        border-collapse: collapse;
+        width: 100%;
+        margin: 8px 0;
+      }
+
+      .jive-message-user th,
+      .jive-message-user td {
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        padding: 8px;
+        text-align: left;
+      }
+
+      .jive-message-user th {
+        background-color: rgba(255, 255, 255, 0.1);
       }
       
       .typing-indicator {
@@ -407,6 +533,13 @@ export class JiveChatbot extends HTMLElement {
       @keyframes fadeIn {
         from { opacity: 0; transform: translateY(10px); }
         to { opacity: 1; transform: translateY(0); }
+      }
+
+      .jive-message-header {
+        margin: 16px 0 8px 0;
+        font-weight: 600;
+        line-height: 1.25;
+        color: var(--text-color);
       }
     `;
     
@@ -483,6 +616,7 @@ export class JiveChatbot extends HTMLElement {
    */
   private initWebSocket(): void {
     const socketEndpoint = this.getAttribute('socket-endpoint') || 'http://localhost:3000';
+    console.log('Initializing WebSocket connection to:', socketEndpoint);
     
     // Check if Socket.IO is available
     if (typeof window.io === 'undefined') {
@@ -492,23 +626,34 @@ export class JiveChatbot extends HTMLElement {
     }
     
     try {
+      console.log('Creating Socket.IO connection...');
       this.socket = window.io(socketEndpoint);
       
       if (this.socket) {
         // Connection events
         this.socket.on('connect', () => {
-          console.log('WebSocket connected');
+          console.log('WebSocket connected successfully');
           this.socketConnected = true;
           this.updateConnectionStatus(true);
+          
+          // Test message to verify connection
+          if (this.socket) {
+            this.socket.emit('message', {
+              text: 'Test connection',
+              timestamp: Date.now()
+            });
+          }
         });
         
         // Message events
         this.socket.on('message', (data: any) => {
+          console.log('Received WebSocket message:', data);
           // Process incoming message data
           this.handleIncomingMessage(data);
         });
         
         this.socket.on('typing', () => {
+          console.log('Received typing indicator');
           this.showTypingIndicator();
         });
         
@@ -522,6 +667,11 @@ export class JiveChatbot extends HTMLElement {
         this.socket.on('error', (error: any) => {
           console.error('WebSocket error:', error);
           this.addSystemMessage(`Error: ${error.message || 'Connection error'}`);
+        });
+
+        // Log all events for debugging
+        this.socket.onAny((event: string, ...args: any[]) => {
+          console.log('Socket.IO event:', event, args);
         });
       }
     } catch (error) {
@@ -615,14 +765,20 @@ export class JiveChatbot extends HTMLElement {
    * Handle incoming message from WebSocket
    */
   private handleIncomingMessage(data: any): void {
+    console.log('handleIncomingMessage called with data:', data);
+    
     // Hide typing indicator if present
     this.hideTypingIndicator();
     
     // Add message to chat
     if (data.type === 'bot') {
+      console.log('Processing bot message:', data.text);
       this.addBotMessage(data.text);
     } else if (data.type === 'system') {
-      this.addSystemMessage(data.text);
+      console.log('Processing system message:', data.text);
+      this.addBotMessage(data.text);
+    } else {
+      console.log('Unknown message type:', data.type);
     }
   }
   
@@ -677,35 +833,101 @@ export class JiveChatbot extends HTMLElement {
   private addUserMessage(text: string): void {
     const message = document.createElement('div');
     message.className = 'jive-message jive-message-user';
-    message.textContent = text; // User messages don't need markdown
     
-    this.chatContainer.appendChild(message);
-    this.scrollToBottom();
+    try {
+      console.log('Converting user message markdown to HTML...');
+      // Configure marked with basic options
+      marked.setOptions({
+        breaks: true,  // Convert line breaks to <br>
+        gfm: true     // GitHub Flavored Markdown
+      });
+
+      // Convert markdown to HTML
+      const rawHtml = marked(text);
+      console.log('Raw HTML:', rawHtml);
+      
+      // Sanitize the HTML using DOMPurify
+      const sanitizedHtml = DOMPurify.sanitize(rawHtml as string, {
+        ALLOWED_TAGS: [
+          'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+          'p', 'br', 'strong', 'em', 'code', 'pre',
+          'ul', 'ol', 'li', 'blockquote', 'a',
+          'table', 'thead', 'tbody', 'tr', 'th', 'td'
+        ],
+        ALLOWED_ATTR: ['class', 'href', 'target', 'rel']
+      });
+      console.log('Sanitized HTML:', sanitizedHtml);
+
+      message.innerHTML = sanitizedHtml;
+      
+      // Add syntax highlighting for code blocks
+      const codeBlocks = message.querySelectorAll('pre code');
+      codeBlocks.forEach((block) => {
+        const language = block.className.match(/language-(\w+)/)?.[1] || 'plaintext';
+        block.classList.add(`language-${language}`);
+      });
+      
+      this.chatContainer.appendChild(message);
+      this.scrollToBottom();
+      
+      // Dispatch event
+      this.dispatchEvent(new CustomEvent('message-sent', {
+        bubbles: true,
+        composed: true,
+        detail: { message: text }
+      }));
+    } catch (error) {
+      console.error('Error parsing markdown:', error);
+      // Fallback to plain text if markdown parsing fails
+      message.textContent = text;
+      this.chatContainer.appendChild(message);
+      this.scrollToBottom();
+    }
   }
   
   /**
    * Add a bot message to the chat
    */
   private async addBotMessage(text: string): Promise<void> {
+    console.log('addBotMessage called with text:', text);
+    
     const message = document.createElement('div');
     message.className = 'jive-message jive-message-bot';
     
     try {
-      // Convert markdown to HTML with proper configuration
-      const html = await marked.parse(text, {
-        breaks: true,  // Enable line breaks
-        gfm: true,     // Enable GitHub Flavored Markdown
-        async: true    // Use async parsing
+      console.log('Converting markdown to HTML...');
+      // Configure marked with basic options
+      marked.setOptions({
+        breaks: true,  // Convert line breaks to <br>
+        gfm: true     // GitHub Flavored Markdown
       });
+
+      // Convert markdown to HTML
+      const rawHtml = marked(text);
+      console.log('Raw HTML:', rawHtml);
       
-      message.innerHTML = html;
+      // Sanitize the HTML using DOMPurify
+      const sanitizedHtml = DOMPurify.sanitize(rawHtml as string, {
+        ALLOWED_TAGS: [
+          'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+          'p', 'br', 'strong', 'em', 'code', 'pre',
+          'ul', 'ol', 'li', 'blockquote', 'a',
+          'table', 'thead', 'tbody', 'tr', 'th', 'td'
+        ],
+        ALLOWED_ATTR: ['class', 'href', 'target', 'rel']
+      });
+      console.log('Sanitized HTML:', sanitizedHtml);
+
+      message.innerHTML = sanitizedHtml;
       
       // Add syntax highlighting for code blocks
       const codeBlocks = message.querySelectorAll('pre code');
       codeBlocks.forEach((block) => {
-        block.classList.add('language-javascript');
+        const language = block.className.match(/language-(\w+)/)?.[1] || 'plaintext';
+        block.classList.add(`language-${language}`);
       });
       
+      console.log('Appending message to chat container');
       this.chatContainer.appendChild(message);
       this.scrollToBottom();
       

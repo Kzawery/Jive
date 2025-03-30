@@ -21,6 +21,8 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@types/dompurify": "^3.2.0",
+    "dompurify": "^3.2.4",
     "marked": "^15.0.7",
     "socket.io-client": "^4.7.4"
   },
