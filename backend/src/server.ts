@@ -1,22 +1,109 @@
-import express, { Request, Response } from 'express';
+import express, { Request, Response, NextFunction, RequestHandler } from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs/promises';
 import { findMarkdownFiles } from './recursive-markdown-finder';
+import http from 'http';
+import { Server } from 'socket.io';
+import { ChromaService } from './chroma/chromaService';
 
 // Load environment variables
 dotenv.config();
 
 // Create Express app
 const app = express();
-const PORT = process.env.PORT || 3000;
+const server = http.createServer(app);
+
+// Initialize Socket.IO with CORS
+const io = new Server(server, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"],
+    credentials: true
+  },
+  path: '/socket.io/',
+  transports: ['polling', 'websocket'],
+  allowEIO3: true,
+  pingTimeout: 60000,
+  pingInterval: 25000,
+  connectTimeout: 45000,
+  maxHttpBufferSize: 1e8,
+  allowUpgrades: true
+});
+
+console.log('Socket.IO server initialized with CORS:', {
+  origin: "*",
+  methods: ["GET", "POST"],
+  credentials: true,
+  transports: ['polling', 'websocket']
+});
+
+// Initialize Chroma service
+const chromaService = new ChromaService();
 
 // Configure middleware
 app.use(cors());
 app.use(morgan('dev'));
 app.use(express.json());
+
+// Serve Socket.IO client
+app.get('/socket.io/socket.io.js', (req, res) => {
+  res.sendFile(require.resolve('socket.io-client/dist/socket.io.js'));
+});
+
+// WebSocket handling
+io.on('connection', (socket) => {
+  console.log('User connected:', socket.id);
+  console.log('Transport:', socket.conn.transport.name);
+
+  // Handle chat messages
+  socket.on('message', async (data) => {
+    console.log('Message received:', data);
+
+    try {
+      // Search for relevant documents
+      const relevantDocs = await chromaService.search(data.text);
+      
+      if (!relevantDocs) {
+        throw new Error('No relevant documents found');
+      }
+      
+      // Combine relevant documents into context
+      const context = relevantDocs.map(doc => doc.pageContent).join("\n");
+      
+      // Generate response using Claude
+      const response = await chromaService.generateResponse(data.text, context);
+      
+      // Send response back to client
+      socket.emit('message', {
+        type: 'bot',
+        text: response,
+        timestamp: Date.now()
+      });
+
+    } catch (error) {
+      console.error('Error processing message:', error);
+      socket.emit('error', { message: 'Failed to process your message' });
+    }
+  });
+
+  // Handle typing indicators
+  socket.on('typing', (data) => {
+    console.log('Typing indicator:', data);
+  });
+
+  // Handle disconnection
+  socket.on('disconnect', (reason) => {
+    console.log('User disconnected:', socket.id, 'Reason:', reason);
+  });
+
+  // Handle connection errors
+  socket.on('error', (error) => {
+    console.error('Socket error:', error);
+  });
+});
 
 // Define route handlers separately to work around TypeScript issues
 const listMarkdownFiles = async (req: Request, res: Response) => {
@@ -42,35 +129,32 @@ const listMarkdownFiles = async (req: Request, res: Response) => {
   }
 };
 
-const getMarkdownFileContent = async (req: Request, res: Response) => {
+const getMarkdownFileContent: RequestHandler = async (req, res) => {
   try {
     const filePath = req.query.path as string;
-    
+
     if (!filePath) {
-      return res.status(400).json({ error: 'File path is required' });
+      res.status(400).json({ error: 'File path is required' });
+      return;
     }
-    
+
     const baseDir = process.env.MARKDOWN_DIR || path.join(process.cwd(), '../');
     const fullPath = path.join(baseDir, filePath);
-    
-    // Make sure the file is within the allowed directory (prevent directory traversal)
-    const normalizedBasePath = path.normalize(baseDir);
-    const normalizedRequestedPath = path.normalize(fullPath);
-    
-    if (!normalizedRequestedPath.startsWith(normalizedBasePath)) {
-      return res.status(403).json({ error: 'Access to file is forbidden' });
+
+    if (path.relative(baseDir, fullPath).startsWith('..')) {
+      res.status(403).json({ error: 'Access to file is forbidden' });
+      return;
     }
-    
-    // Check if file exists and is a markdown file
+
     const stats = await fs.stat(fullPath);
-    
+
     if (!stats.isFile() || !fullPath.endsWith('.md')) {
-      return res.status(404).json({ error: 'File not found or not a markdown file' });
+      res.status(404).json({ error: 'File not found or not a markdown file' });
+      return;
     }
-    
-    // Read file content
+
     const content = await fs.readFile(fullPath, 'utf-8');
-    
+
     res.json({
       filename: path.basename(filePath),
       path: filePath,
@@ -80,11 +164,12 @@ const getMarkdownFileContent = async (req: Request, res: Response) => {
     });
   } catch (err) {
     console.error('Error reading markdown file:', err);
-    
-    if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
-      return res.status(404).json({ error: 'File not found' });
+
+    if (err instanceof Error && 'code' in err && err.code === 'ENOENT') {
+      res.status(404).json({ error: 'File not found' });
+      return;
     }
-    
+
     res.status(500).json({ error: 'Failed to read markdown file' });
   }
 };
@@ -93,10 +178,18 @@ const getMarkdownFileContent = async (req: Request, res: Response) => {
 app.get('/api/markdown', listMarkdownFiles);
 app.get('/api/markdown/file', getMarkdownFileContent);
 
+// Add a health check endpoint
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok' });
+});
+
 // Start the server
 export function startServer() {
-  return app.listen(PORT, () => {
+  const PORT = process.env.PORT || 3000;
+  server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
+    console.log(`WebSocket server is running on ws://localhost:${PORT}`);
+    console.log(`Socket.IO endpoint: http://localhost:${PORT}/socket.io/`);
   });
 }
 

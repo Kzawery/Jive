@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,18 +13,18 @@
       color: #333;
       line-height: 1.6;
     }
-    
+
     .container {
       max-width: 800px;
       margin: 0 auto;
       padding: 20px;
     }
-    
+
     h1 {
       color: #4a90e2;
       margin-bottom: 10px;
     }
-    
+
     .demo-section {
       margin: 40px 0;
       padding: 20px;
@@ -31,31 +32,32 @@
       border-radius: 8px;
       background-color: #f9f9f9;
     }
-    
+
     .control-panel {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 15px;
       margin-bottom: 20px;
     }
-    
+
     .control-group {
       margin-bottom: 15px;
     }
-    
+
     label {
       display: block;
       margin-bottom: 5px;
       font-weight: bold;
     }
-    
-    input, select {
+
+    input,
+    select {
       width: 100%;
       padding: 8px;
       border: 1px solid #ddd;
       border-radius: 4px;
     }
-    
+
     button {
       background-color: #4a90e2;
       color: white;
@@ -65,11 +67,11 @@
       cursor: pointer;
       font-size: 14px;
     }
-    
+
     button:hover {
       background-color: #3a80d2;
     }
-    
+
     .code-example {
       background-color: #f5f5f5;
       padding: 15px;
@@ -78,7 +80,7 @@
       overflow-x: auto;
       margin: 10px 0;
     }
-    
+
     .event-log {
       height: 150px;
       overflow-y: auto;
@@ -90,12 +92,17 @@
       margin-top: 20px;
     }
   </style>
+  <!-- Add Socket.IO client -->
+  <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
+  <!-- Add the widget script -->
+  <script src="../dist/jive-chatbot.umd.js"></script>
 </head>
+
 <body>
   <div class="container">
     <h1>Jive Chatbot Widget Demo</h1>
     <p>This demo page allows you to experiment with the Jive Chatbot Web Component and its customization options.</p>
-    
+
     <div class="demo-section">
       <h2>Customize Chatbot</h2>
       <div class="control-panel">
@@ -103,7 +110,7 @@
           <label for="company-name">Company Name</label>
           <input type="text" id="company-name" value="Jive Support">
         </div>
-        
+
         <div class="control-group">
           <label for="position">Position</label>
           <select id="position">
@@ -113,51 +120,51 @@
             <option value="top-left">Top Left</option>
           </select>
         </div>
-        
+
         <div class="control-group">
           <label for="welcome-message">Welcome Message</label>
           <input type="text" id="welcome-message" value="Hello! How can I help you today?">
         </div>
-        
+
         <div class="control-group">
           <label for="primary-color">Primary Color</label>
           <input type="color" id="primary-color" value="#4a90e2">
         </div>
-        
+
         <div class="control-group">
           <label for="secondary-color">Secondary Color</label>
           <input type="color" id="secondary-color" value="#f2f2f2">
         </div>
-        
+
         <div class="control-group">
           <label for="socket-endpoint">WebSocket Endpoint</label>
           <input type="text" id="socket-endpoint" value="http://localhost:3000">
         </div>
       </div>
-      
+
       <button id="apply-settings">Apply Settings</button>
       <button id="send-message">Send Test Message</button>
     </div>
-    
+
     <div class="demo-section">
       <h2>Event Log</h2>
       <div class="event-log" id="event-log"></div>
       <button id="clear-log">Clear Log</button>
     </div>
-    
+
     <div class="demo-section">
       <h2>Installation Code</h2>
       <p>Copy this code to add the Jive Chatbot to your website:</p>
       <div class="code-example" id="installation-code">
         &lt;script src="dist/jive-chatbot.umd.min.js"&gt;&lt;/script&gt;
-        &lt;jive-chatbot 
-          api-endpoint="https://your-api-endpoint.com" 
-          company-name="Jive Support" 
-          welcome-message="Hello! How can I help you today?"&gt;
+        &lt;jive-chatbot
+        api-endpoint="https://your-api-endpoint.com"
+        company-name="Jive Support"
+        welcome-message="Hello! How can I help you today?"&gt;
         &lt;/jive-chatbot&gt;
       </div>
     </div>
-    
+
     <div class="demo-section">
       <h2>WebSocket Testing</h2>
       <button id="test-direct-connection">Test Direct WebSocket Connection</button>
@@ -166,40 +173,19 @@
       <div class="websocket-status">Status: Not connected</div>
     </div>
   </div>
-  
-  <!-- Include Socket.IO client for direct usage -->
-  <script src="https://cdn.socket.io/4.7.4/socket.io.min.js" integrity="sha384-Gr6Lu2Ajx28mzwyVR8CFkULdCU7kMlZ9UthllibdOSo6qAiN+yXNHqtgdTvFXMT4" crossorigin="anonymous"></script>
-  
-  <!-- Ensure Socket.IO is loaded globally -->
-  <script>
-    // Verify Socket.IO is available globally
-    if (typeof io === 'undefined') {
-      console.error('Socket.IO client failed to load. The chatbot may not function properly.');
-      // Create a basic stub to prevent errors
-      window.io = function() {
-        console.warn('Using Socket.IO stub - connection will not work');
-        return {
-          on: function() {},
-          emit: function() {},
-          disconnect: function() {}
-        };
-      };
-    } else {
-      console.log('Socket.IO client loaded successfully');
-    }
-  </script>
-  
-  <!-- Include the chatbot component -->
-  <script src="../dist/jive-chatbot.umd.js"></script>
-  
+
   <!-- Add chatbot instance -->
-  <jive-chatbot id="demo-chatbot" api-endpoint="https://demo-api.example.com"></jive-chatbot>
-  
+  <jive-chatbot
+    api-endpoint="http://localhost:3000"
+    socket-endpoint="http://localhost:3000"
+    company-name="Jive Support">
+  </jive-chatbot>
+
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       // Get reference to chatbot element
-      const chatbot = document.getElementById('demo-chatbot');
-      
+      const chatbot = document.querySelector('jive-chatbot');
+
       // Get UI elements
       const companyNameInput = document.getElementById('company-name');
       const positionSelect = document.getElementById('position');
@@ -211,20 +197,20 @@
       const eventLog = document.getElementById('event-log');
       const clearLogButton = document.getElementById('clear-log');
       const installationCode = document.getElementById('installation-code');
-      
+
       // Add WebSocket direct testing
       const testDirectButton = document.getElementById('test-direct-connection');
       const testChatbotButton = document.getElementById('test-chatbot-connection');
       const debugSocketIOButton = document.getElementById('debug-socket-io');
       const websocketStatus = document.querySelector('.websocket-status');
       let directSocket = null;
-      
+
       // Add debug button for Socket.IO
       debugSocketIOButton.addEventListener('click', () => {
         // Log the Socket.IO object details
         if (typeof window.io !== 'undefined') {
           logEvent(`Socket.IO is available globally: ${typeof window.io}`);
-          
+
           // Try to create a connection object (without connecting)
           try {
             const socketTest = window.io('http://localhost:3000', { autoConnect: false });
@@ -236,7 +222,7 @@
         } else {
           logEvent('Socket.IO is NOT available globally');
         }
-        
+
         // Check if io is available directly
         if (typeof io !== 'undefined') {
           logEvent('io is available directly in the global scope');
@@ -244,7 +230,7 @@
           logEvent('io is NOT available directly in the global scope');
         }
       });
-      
+
       // Apply settings button
       applyButton.addEventListener('click', () => {
         // Update attributes
@@ -252,38 +238,38 @@
         chatbot.setAttribute('position', positionSelect.value);
         chatbot.setAttribute('welcome-message', welcomeMessageInput.value);
         chatbot.setAttribute('socket-endpoint', document.getElementById('socket-endpoint').value);
-        
+
         // Update theme
         const theme = `${primaryColorInput.value}:${secondaryColorInput.value}`;
         chatbot.setAttribute('theme', theme);
-        
+
         // Update installation code
         updateInstallationCode();
-        
+
         // Log event
         logEvent('Settings applied');
       });
-      
+
       // Send test message
       sendMessageButton.addEventListener('click', () => {
         chatbot.sendMessageProgrammatically('This is a test message sent programmatically');
         logEvent('Test message sent');
       });
-      
+
       // Clear log
       clearLogButton.addEventListener('click', () => {
         eventLog.innerHTML = '';
       });
-      
+
       // Listen for chatbot events
       chatbot.addEventListener('message-sent', (event) => {
         logEvent(`Message sent: ${event.detail.message}`);
       });
-      
+
       chatbot.addEventListener('message-received', (event) => {
         logEvent(`Message received: ${event.detail.message}`);
       });
-      
+
       // Update installation code
       function updateInstallationCode() {
         const code = `&lt;script src="dist/jive-chatbot.umd.min.js"&gt;&lt;/script&gt;
@@ -294,10 +280,10 @@
   theme="${primaryColorInput.value}:${secondaryColorInput.value}"
   welcome-message="${welcomeMessageInput.value}"&gt;
 &lt;/jive-chatbot&gt;`;
-        
+
         installationCode.innerHTML = code;
       }
-      
+
       // Log event with timestamp
       function logEvent(message) {
         const timestamp = new Date().toLocaleTimeString();
@@ -306,15 +292,15 @@
         eventLog.appendChild(logEntry);
         eventLog.scrollTop = eventLog.scrollHeight;
       }
-      
+
       // Initialize with current values
       updateInstallationCode();
       logEvent('Demo initialized');
-      
+
       // Test direct WebSocket connection
       testDirectButton.addEventListener('click', () => {
         const endpoint = document.getElementById('socket-endpoint').value;
-        
+
         if (directSocket) {
           directSocket.disconnect();
           directSocket = null;
@@ -322,47 +308,65 @@
           testDirectButton.textContent = 'Test Direct WebSocket Connection';
           return;
         }
-        
+
         try {
-          directSocket = io(endpoint);
-          
+          logEvent(`Attempting to connect to ${endpoint}`);
+          directSocket = io(endpoint, {
+            transports: ['polling', 'websocket'],
+            reconnection: true,
+            reconnectionAttempts: 5,
+            reconnectionDelay: 1000,
+            timeout: 45000,
+            forceNew: true,
+            path: '/socket.io/',
+            autoConnect: true,
+            withCredentials: true,
+            upgrade: true,
+            rememberUpgrade: true,
+            rejectUnauthorized: false
+          });
+
           directSocket.on('connect', () => {
             websocketStatus.textContent = `Status: Connected directly (${directSocket.id})`;
             testDirectButton.textContent = 'Disconnect Direct WebSocket';
-            logEvent('WebSocket connected directly');
-            
+            logEvent(`WebSocket connected directly (ID: ${directSocket.id})`);
+            logEvent(`Transport: ${directSocket.io.engine.transport.name}`);
+
             // Send a test message
-            directSocket.emit('message', { 
+            directSocket.emit('message', {
               text: 'Hello from direct connection',
               timestamp: Date.now()
             });
           });
-          
-          directSocket.on('message', (data) => {
-            logEvent(`Direct WS received: ${JSON.stringify(data)}`);
+
+          directSocket.on('connect_error', (error) => {
+            logEvent(`Connection error: ${error.message}`);
+            websocketStatus.textContent = `Status: Connection Error - ${error.message}`;
+            console.error('Connection error:', error);
           });
-          
-          directSocket.on('disconnect', () => {
-            websocketStatus.textContent = 'Status: Disconnected';
-            testDirectButton.textContent = 'Test Direct WebSocket Connection';
-            logEvent('WebSocket disconnected directly');
-          });
-          
+
           directSocket.on('error', (error) => {
-            websocketStatus.textContent = `Status: Error - ${error.message || 'Unknown'}`;
-            logEvent(`WebSocket error: ${error.message || 'Unknown'}`);
+            logEvent(`Socket error: ${error.message}`);
+            websocketStatus.textContent = `Status: Socket Error - ${error.message}`;
+            console.error('Socket error:', error);
           });
-          
+
+          directSocket.on('disconnect', (reason) => {
+            logEvent(`Disconnected: ${reason}`);
+            websocketStatus.textContent = `Status: Disconnected - ${reason}`;
+            testDirectButton.textContent = 'Test Direct WebSocket Connection';
+          });
+
         } catch (error) {
           websocketStatus.textContent = `Status: Error - ${error.message || 'Unknown'}`;
           logEvent(`WebSocket connection error: ${error.message || 'Unknown'}`);
         }
       });
-      
+
       // Test chatbot WebSocket connection by toggling it
       testChatbotButton.addEventListener('click', () => {
         const chatbotSocket = chatbot.getAttribute('socket-endpoint');
-        
+
         if (chatbotSocket) {
           // Disconnect by setting empty endpoint
           chatbot.removeAttribute('socket-endpoint');
@@ -379,4 +383,5 @@
     });
   </script>
 </body>
-</html> 
+
+</html>
