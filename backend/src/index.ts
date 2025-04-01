@@ -8,6 +8,7 @@ import { PDFService } from './services/pdfService';
 import multer from 'multer';
 import path from 'path';
 import dotenv from 'dotenv';
+import { v4 as uuidv4 } from 'uuid';
 
 // Load environment variables
 dotenv.config();
@@ -42,7 +43,8 @@ const io = new Server(server, {
   cors: {
     origin: '*',
     methods: ['GET', 'POST'],
-    credentials: true
+    credentials: true,
+    allowedHeaders: ['*']
   },
   path: '/socket.io/',
   transports: ['polling', 'websocket'],
@@ -51,7 +53,8 @@ const io = new Server(server, {
   pingInterval: 25000,
   connectTimeout: 45000,
   maxHttpBufferSize: 1e8,
-  allowUpgrades: true
+  allowUpgrades: true,
+  cookie: false
 });
 
 // Initialize services
@@ -72,6 +75,48 @@ app.get('/socket.io/socket.io.js', (req, res) => {
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
+
+// Types for chat and review system
+interface Chat {
+  id: string;
+  question: string;
+  answer: string;
+  timestamp: Date;
+  resolved: boolean;
+  category?: string;
+  review?: Review;
+}
+
+interface Review {
+  id: string;
+  chatId: string;
+  resolved: boolean;
+  comments: Comment[];
+  timestamp: Date;
+}
+
+interface Comment {
+  id: string;
+  reviewerId: string;
+  text: string;
+  timestamp: Date;
+}
+
+interface ChatRequest extends Request {
+  params: {
+    chatId: string;
+  };
+}
+
+interface ReviewRequest extends Request {
+  params: {
+    reviewId: string;
+  };
+}
+
+// In-memory storage (replace with database in production)
+const chats: Map<string, Chat> = new Map();
+const reviews: Map<string, Review> = new Map();
 
 // Add document to knowledgebase
 const addKnowledgeHandler: RequestHandler = async (req, res) => {
@@ -183,6 +228,138 @@ app.post('/api/documents/search', async (req, res) => {
   }
 });
 
+// Chat storage endpoint
+app.post('/api/chats', async (req, res) => {
+  try {
+    const { question, answer } = req.body;
+    const chat: Chat = {
+      id: uuidv4(),
+      question,
+      answer,
+      timestamp: new Date(),
+      resolved: false
+    };
+    
+    chats.set(chat.id, chat);
+    res.status(201).json(chat);
+  } catch (error) {
+    console.error('Error storing chat:', error);
+    res.status(500).json({ error: 'Failed to store chat' });
+  }
+});
+
+// Get all chats
+app.get('/api/chats', (req, res) => {
+  try {
+    const chatList = Array.from(chats.values());
+    res.json(chatList);
+  } catch (error) {
+    console.error('Error retrieving chats:', error);
+    res.status(500).json({ error: 'Failed to retrieve chats' });
+  }
+});
+
+// Create review for a chat
+app.post('/api/chats/:chatId/reviews', (async (req: Request, res: Response) => {
+  try {
+    const { chatId } = req.params as { chatId: string };
+    const { resolved, comments } = req.body;
+    
+    const chat = chats.get(chatId);
+    if (!chat) {
+      return res.status(404).json({ error: 'Chat not found' });
+    }
+    
+    const review: Review = {
+      id: uuidv4(),
+      chatId,
+      resolved,
+      comments: comments.map((comment: { reviewerId: string; text: string }) => ({
+        id: uuidv4(),
+        reviewerId: comment.reviewerId,
+        text: comment.text,
+        timestamp: new Date()
+      })),
+      timestamp: new Date()
+    };
+    
+    reviews.set(review.id, review);
+    chat.review = review;
+    chat.resolved = resolved;
+    
+    res.status(201).json(review);
+  } catch (error) {
+    console.error('Error creating review:', error);
+    res.status(500).json({ error: 'Failed to create review' });
+  }
+}) as RequestHandler);
+
+// Add comment to a review
+app.post('/api/reviews/:reviewId/comments', (async (req: Request, res: Response) => {
+  try {
+    const { reviewId } = req.params as { reviewId: string };
+    const { reviewerId, text } = req.body;
+    
+    const review = reviews.get(reviewId);
+    if (!review) {
+      return res.status(404).json({ error: 'Review not found' });
+    }
+    
+    const comment: Comment = {
+      id: uuidv4(),
+      reviewerId,
+      text,
+      timestamp: new Date()
+    };
+    
+    review.comments.push(comment);
+    res.status(201).json(comment);
+  } catch (error) {
+    console.error('Error adding comment:', error);
+    res.status(500).json({ error: 'Failed to add comment' });
+  }
+}) as RequestHandler);
+
+// Update chat category
+app.patch('/api/chats/:chatId/category', (async (req: Request, res: Response) => {
+  try {
+    const { chatId } = req.params as { chatId: string };
+    const { category } = req.body;
+    
+    const chat = chats.get(chatId);
+    if (!chat) {
+      return res.status(404).json({ error: 'Chat not found' });
+    }
+    
+    chat.category = category;
+    res.json(chat);
+  } catch (error) {
+    console.error('Error updating chat category:', error);
+    res.status(500).json({ error: 'Failed to update chat category' });
+  }
+}) as RequestHandler);
+
+// Get chats by category
+app.get('/api/chats/category/:category', (req, res) => {
+  try {
+    const { category } = req.params;
+    const chatList = Array.from(chats.values())
+      .filter(chat => chat.category === category);
+    res.json(chatList);
+  } catch (error) {
+    console.error('Error retrieving chats by category:', error);
+    res.status(500).json({ error: 'Failed to retrieve chats by category' });
+  }
+});
+
+// Add CORS headers for all routes
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+  next();
+});
+
 // WebSocket handling
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
@@ -206,11 +383,22 @@ io.on('connection', (socket) => {
       // Generate response using Claude
       const response = await chromaService.generateResponse(data.text, context);
       
+      // Store the chat
+      const chat: Chat = {
+        id: uuidv4(),
+        question: data.text,
+        answer: typeof response === 'string' ? response : JSON.stringify(response),
+        timestamp: new Date(),
+        resolved: false
+      };
+      chats.set(chat.id, chat);
+      
       // Send response back to client
       socket.emit('message', {
         type: 'bot',
-        text: response,
-        timestamp: Date.now()
+        text: typeof response === 'string' ? response : JSON.stringify(response),
+        timestamp: Date.now(),
+        chatId: chat.id
       });
 
     } catch (error) {
