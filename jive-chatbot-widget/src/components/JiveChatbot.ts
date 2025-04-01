@@ -635,14 +635,6 @@ export class JiveChatbot extends HTMLElement {
           console.log('WebSocket connected successfully');
           this.socketConnected = true;
           this.updateConnectionStatus(true);
-          
-          // Test message to verify connection
-          if (this.socket) {
-            this.socket.emit('message', {
-              text: 'Test connection',
-              timestamp: Date.now()
-            });
-          }
         });
         
         // Message events

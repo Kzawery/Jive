@@ -20,7 +20,7 @@ export class PDFService {
     try {
       // Check if hash exists in our hash database
       const hashDbPath = path.join(process.cwd(), 'data', 'file_hashes.json');
-      let hashDb: Record<string, string> = {};
+      let hashDb: Record<string, { hash: string; content: string }> = {};
       
       try {
         const hashDbContent = await fs.readFile(hashDbPath, 'utf-8');
@@ -30,13 +30,29 @@ export class PDFService {
         await fs.writeFile(hashDbPath, JSON.stringify({}, null, 2));
       }
 
+      // Read current file content
+      const currentContent = await this.readPDF(filePath);
+
       // Check if hash exists
-      if (hashDb[hash]) {
+      if (hashDb[filePath]?.hash === hash) {
+        console.log('Exact duplicate found by hash:', filePath);
         return true;
       }
 
-      // Add new hash to database
-      hashDb[hash] = filePath;
+      // Check content similarity with existing files
+      for (const [existingPath, existingData] of Object.entries(hashDb)) {
+        const similarity = this.calculateSimilarity(currentContent, existingData.content);
+        if (similarity > 0.95) { // 95% similarity threshold
+          console.log('Similar content found:', filePath, 'similar to', existingPath);
+          return true;
+        }
+      }
+
+      // Add new file to database
+      hashDb[filePath] = {
+        hash,
+        content: currentContent
+      };
       await fs.writeFile(hashDbPath, JSON.stringify(hashDb, null, 2));
       
       return false;
@@ -44,6 +60,17 @@ export class PDFService {
       console.error('Error checking for duplicates:', error);
       return false;
     }
+  }
+
+  private calculateSimilarity(text1: string, text2: string): number {
+    // Simple similarity calculation based on common words
+    const words1 = new Set(text1.toLowerCase().split(/\s+/));
+    const words2 = new Set(text2.toLowerCase().split(/\s+/));
+    
+    const intersection = new Set([...words1].filter(x => words2.has(x)));
+    const union = new Set([...words1, ...words2]);
+    
+    return intersection.size / union.size;
   }
 
   async readPDF(filePath: string): Promise<string> {

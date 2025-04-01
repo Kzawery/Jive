@@ -66,6 +66,12 @@ export class ChromaService {
     return documents;
   }
 
+  async deleteDocument(id: string) {
+    if (!this.vectorStore) await this.initialize();
+    const collection = await this.vectorStore?.collection;
+    await collection?.delete({ ids: [id] });
+  }
+
   async generateResponse(query: string, context: string) {
     const prompt = `Context: ${context}\n\nQuestion: ${query}\n\nPlease provide a helpful response based on the context provided.`;
     

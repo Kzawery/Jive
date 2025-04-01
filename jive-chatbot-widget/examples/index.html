@@ -132,6 +132,103 @@
       background: #fff3e0;
       color: #e65100;
     }
+
+    .file-list {
+      margin-top: 20px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 10px;
+    }
+
+    .file-list h3 {
+      margin-top: 0;
+      color: #333;
+    }
+
+    .file-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding: 12px;
+      border-bottom: 1px solid #eee;
+      background-color: #fff;
+      transition: background-color 0.2s;
+    }
+
+    .file-item:hover {
+      background-color: #f9f9f9;
+    }
+
+    .file-item:last-child {
+      border-bottom: none;
+    }
+
+    .file-info {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      flex: 1;
+    }
+
+    .file-name {
+      font-weight: 500;
+      color: #333;
+    }
+
+    .file-details {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      font-size: 0.9em;
+      color: #666;
+    }
+
+    .file-details span {
+      display: inline-flex;
+      align-items: center;
+      background-color: #f5f5f5;
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+
+    .file-filename {
+      color: #4a90e2;
+      font-weight: 500;
+    }
+
+    .file-path {
+      color: #666;
+    }
+
+    .file-size {
+      color: #666;
+    }
+
+    .file-type {
+      color: #666;
+      text-transform: uppercase;
+    }
+
+    .delete-btn {
+      background-color: #ff4444;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+      margin-left: 12px;
+    }
+
+    .delete-btn:hover {
+      background-color: #cc0000;
+    }
+
+    .empty-state {
+      text-align: center;
+      color: #666;
+      padding: 20px;
+    }
   </style>
   <!-- Add Socket.IO client -->
   <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
@@ -218,6 +315,11 @@
       <button id="test-chatbot-connection">Test Chatbot WebSocket Connection</button>
       <button id="debug-socket-io">Debug Socket.IO</button>
       <div class="websocket-status">Status: Not connected</div>
+    </div>
+
+    <div class="file-list">
+      <h3>Uploaded Files</h3>
+      <div id="fileList"></div>
     </div>
   </div>
 
@@ -469,6 +571,112 @@
           }
         }
       });
+
+      async function loadFileList() {
+        const fileListDiv = document.getElementById('fileList');
+        const apiEndpoint = document.getElementById('socket-endpoint').value;
+        
+        console.log('Loading file list from endpoint:', apiEndpoint);
+        
+        try {
+          const response = await fetch(`${apiEndpoint}/api/documents`);
+          console.log('Response status:', response.status);
+          
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          
+          const data = await response.json();
+          console.log('Received data:', data);
+          
+          const fileList = document.getElementById('fileList');
+          if (!fileList) return;
+          
+          // Extract documents, ids, and metadata from the response
+          const documents = data.documents.documents || [];
+          const ids = data.documents.ids || [];
+          const metadatas = data.documents.metadatas || [];
+          
+          console.log('Processed files:', documents);
+          
+          if (documents.length === 0) {
+            console.log('No files found');
+            fileList.innerHTML = '<p>No files uploaded yet</p>';
+            return;
+          }
+          
+          fileList.innerHTML = documents.map((doc, index) => {
+            const id = ids[index];
+            const metadata = metadatas[index];
+            const name = metadata?.name || doc.substring(0, 50) + '...';
+            const filename = metadata?.filename || 'Unknown filename';
+            const path = metadata?.path || 'Unknown path';
+            const size = metadata?.size || 0;
+            const type = metadata?.type || 'Unknown type';
+            
+            return `
+              <div class="file-item">
+                <div class="file-info">
+                  <div class="file-name">${name}</div>
+                  <div class="file-details">
+                    <span class="file-filename">${filename}</span>
+                    <span class="file-path">${path}</span>
+                    <span class="file-size">${formatFileSize(size)}</span>
+                    <span class="file-type">${type}</span>
+                  </div>
+                </div>
+                <button class="delete-btn" data-file-id="${id}">Delete</button>
+              </div>
+            `;
+          }).join('');
+          
+          // Add event listeners to delete buttons
+          document.querySelectorAll('.delete-btn').forEach(button => {
+            button.addEventListener('click', () => {
+              const fileId = button.getAttribute('data-file-id');
+              if (fileId) {
+                deleteFile(fileId);
+              }
+            });
+          });
+        } catch (error) {
+          console.error('Error loading files:', error);
+          const fileList = document.getElementById('fileList');
+          if (fileList) {
+            fileList.innerHTML = '<p>Error loading files</p>';
+          }
+        }
+      }
+
+      // Move deleteFile function to global scope
+      window.deleteFile = async function(fileId) {
+        const apiEndpoint = document.getElementById('socket-endpoint').value;
+        try {
+          const response = await fetch(`${apiEndpoint}/api/documents/${fileId}`, {
+            method: 'DELETE'
+          });
+
+          if (response.ok) {
+            loadFileList(); // Refresh the file list
+          } else {
+            const result = await response.json();
+            alert(`Error deleting file: ${result.error}`);
+          }
+        } catch (error) {
+          alert(`Error deleting file: ${error.message}`);
+        }
+      };
+
+      function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+      }
+
+      // Load file list when page loads
+      loadFileList();
     });
   </script>
 </body>

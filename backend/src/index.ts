@@ -156,7 +156,16 @@ app.get('/api/documents', async (req, res) => {
     res.status(500).json({ error: 'Failed to list documents' });
   }
 });
-
+app.delete('/api/documents/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await chromaService.deleteDocument(id);
+    res.json({ message: 'Document deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting document:', error);
+    res.status(500).json({ error: 'Failed to delete document' });
+  }
+});
 // Search documents
 app.post('/api/documents/search', async (req, res) => {
   try {
