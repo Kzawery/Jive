@@ -2,59 +2,46 @@ import pdfParse from 'pdf-parse';
 import fs from 'fs/promises';
 import path from 'path';
 import crypto from 'crypto';
+import { v4 as uuidv4 } from 'uuid';
+import { ChromaService } from './chromaService';
 
 interface TextContent {
-  items: Array<{
-    str: string;
-    transform: number[];
-  }>;
+  text: string;
+  metadata: {
+    filename: string;
+    path: string;
+    type: string;
+    size: number;
+  };
 }
 
 export class PDFService {
-  private async calculateFileHash(filePath: string): Promise<string> {
-    const fileBuffer = await fs.readFile(filePath);
-    return crypto.createHash('sha256').update(fileBuffer).digest('hex');
+  private hashDatabase: Map<string, string> = new Map();
+  private chromaService: ChromaService;
+
+  constructor() {
+    this.chromaService = new ChromaService();
   }
 
-  private async isDuplicate(filePath: string, hash: string): Promise<boolean> {
+  async isDuplicate(filePath: string, filename: string): Promise<boolean> {
     try {
-      // Check if hash exists in our hash database
-      const hashDbPath = path.join(process.cwd(), 'data', 'file_hashes.json');
-      let hashDb: Record<string, { hash: string; content: string }> = {};
+      const fileHash = await this.calculateFileHash(filePath);
       
-      try {
-        const hashDbContent = await fs.readFile(hashDbPath, 'utf-8');
-        hashDb = JSON.parse(hashDbContent);
-      } catch (error) {
-        // If file doesn't exist, create it
-        await fs.writeFile(hashDbPath, JSON.stringify({}, null, 2));
-      }
-
-      // Read current file content
-      const currentContent = await this.readPDF(filePath);
-
       // Check if hash exists
-      if (hashDb[filePath]?.hash === hash) {
-        console.log('Exact duplicate found by hash:', filePath);
+      if (this.hashDatabase.has(fileHash)) {
         return true;
       }
 
-      // Check content similarity with existing files
-      for (const [existingPath, existingData] of Object.entries(hashDb)) {
-        const similarity = this.calculateSimilarity(currentContent, existingData.content);
-        if (similarity > 0.95) { // 95% similarity threshold
-          console.log('Similar content found:', filePath, 'similar to', existingPath);
+      // Check content similarity
+      const currentContent = await this.readPDF(filePath);
+      for (const [existingHash, existingContent] of this.hashDatabase.entries()) {
+        if (this.calculateSimilarity(currentContent, existingContent) > 0.95) {
           return true;
         }
       }
 
-      // Add new file to database
-      hashDb[filePath] = {
-        hash,
-        content: currentContent
-      };
-      await fs.writeFile(hashDbPath, JSON.stringify(hashDb, null, 2));
-      
+      // Add to database if not duplicate
+      this.hashDatabase.set(fileHash, currentContent);
       return false;
     } catch (error) {
       console.error('Error checking for duplicates:', error);
@@ -62,8 +49,43 @@ export class PDFService {
     }
   }
 
+  async processPDF(filePath: string, filename: string): Promise<any> {
+    try {
+      const text = await this.readPDF(filePath);
+      const metadata = {
+        filename,
+        path: filePath,
+        type: 'pdf',
+        size: (await fs.stat(filePath)).size
+      };
+
+      // Add to Chroma collection
+      const collection = await this.chromaService.getCollection();
+      if (!collection) {
+        throw new Error('Failed to get collection');
+      }
+
+      const result = await collection.add({
+        documents: [text],
+        metadatas: [metadata],
+        ids: [uuidv4()]
+      });
+
+      return result;
+    } catch (error) {
+      console.error('Error processing PDF:', error);
+      throw error;
+    }
+  }
+
+  private async calculateFileHash(filePath: string): Promise<string> {
+    const fileBuffer = await fs.readFile(filePath);
+    const hash = crypto.createHash('sha256');
+    hash.update(fileBuffer);
+    return hash.digest('hex');
+  }
+
   private calculateSimilarity(text1: string, text2: string): number {
-    // Simple similarity calculation based on common words
     const words1 = new Set(text1.toLowerCase().split(/\s+/));
     const words2 = new Set(text2.toLowerCase().split(/\s+/));
     
@@ -117,7 +139,7 @@ export class PDFService {
           const hash = await this.calculateFileHash(filePath);
           
           // Check for duplicates
-          const isDuplicate = await this.isDuplicate(filePath, hash);
+          const isDuplicate = await this.isDuplicate(filePath, file);
           if (isDuplicate) {
             console.log('Skipping duplicate file:', file);
             return null;

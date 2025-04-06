@@ -1,4 +1,4 @@
-import { ChromaService } from '../chroma/chromaService';
+import { ChromaService } from '../services/chromaService';
 import dotenv from 'dotenv';
 
 dotenv.config();

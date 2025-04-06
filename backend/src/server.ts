@@ -7,7 +7,7 @@ import fs from 'fs/promises';
 import { findMarkdownFiles } from './recursive-markdown-finder';
 import http from 'http';
 import { Server } from 'socket.io';
-import { ChromaService } from './chroma/chromaService';
+import { ChromaService } from './services/chromaService';
 
 // Load environment variables
 dotenv.config();
