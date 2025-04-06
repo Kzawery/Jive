@@ -63,24 +63,123 @@ io.on('connection', (socket) => {
     console.log('Message received:', data);
 
     try {
+      // Log the incoming query for debugging
+      console.log(`Processing query: "${data.text}"`);
+      
+      // Determine if the query is specifically asking for documentation or links
+      const isAskingForDocs = /document(ation)?|manual|guide|instruction|pdf|download|links?/i.test(data.text);
+      
       // Search for relevant documents
       const relevantDocs = await chromaService.search(data.text);
       
-      if (!relevantDocs) {
-        throw new Error('No relevant documents found');
+      if (!relevantDocs || relevantDocs.length === 0) {
+        console.log('No relevant documents found for query');
+        
+        // Generate a response even when no documents are found
+        const fallbackResponse = await chromaService.generateResponse(data.text, 
+          "I don't have specific information about this in my knowledge base. " +
+          "Please ask for more details or try a different query.");
+        
+        socket.emit('message', {
+          type: 'bot',
+          text: fallbackResponse.text,
+          timestamp: Date.now(),
+          metadata: {
+            links: []
+          }
+        });
+        
+        return;
       }
       
-      // Combine relevant documents into context
-      const context = relevantDocs.map(doc => doc.pageContent).join("\n");
+      // Generate response using Claude with context including metadata
+      const responseData = await chromaService.generateResponse(data.text, relevantDocs);
       
-      // Generate response using Claude
-      const response = await chromaService.generateResponse(data.text, context);
+      // Format the response with markdown links if there are any
+      let formattedText = responseData.text;
+      
+      // Add links section if links are available
+      if (responseData.links && responseData.links.length > 0) {
+        console.log(`Adding ${responseData.links.length} links to response`);
+        
+        // If user specifically asked for documentation, put links at the top
+        if (isAskingForDocs) {
+          const tempText = formattedText;
+          formattedText = "**Znalezione dokumenty:**\n\n";
+          
+          // Group links by type
+          const webpageLinks = responseData.links.filter(link => link.type === 'webpage');
+          const documentLinks = responseData.links.filter(link => 
+            link.type === 'application/pdf' || 
+            link.type === 'document' || 
+            link.type.includes('pdf')
+          );
+          
+          // Add document links first since they were specifically requested
+          if (documentLinks.length > 0) {
+            formattedText += "**Dokumenty:**\n";
+            documentLinks.forEach(link => {
+              formattedText += `- [${link.title}](${link.url})\n`;
+            });
+            formattedText += "\n";
+          }
+          
+          // Add webpage links
+          if (webpageLinks.length > 0) {
+            formattedText += "**Strony internetowe:**\n";
+            webpageLinks.forEach(link => {
+              formattedText += `- [${link.title}](${link.url})\n`;
+            });
+            formattedText += "\n";
+          }
+          
+          // Add Claude's response after the links
+          formattedText += "**Odpowiedź:**\n\n" + tempText;
+        } else {
+          // Regular query - add links at the bottom
+          formattedText += '\n\n**Dostępne źródła:**';
+          
+          // Group links by type
+          const webpageLinks = responseData.links.filter(link => link.type === 'webpage');
+          const documentLinks = responseData.links.filter(link => 
+            link.type === 'application/pdf' || 
+            link.type === 'document' || 
+            link.type.includes('pdf')
+          );
+          
+          // Add webpage links
+          if (webpageLinks.length > 0) {
+            formattedText += '\n\n**Strony internetowe:**';
+            webpageLinks.forEach(link => {
+              formattedText += `\n- [${link.title}](${link.url})`;
+            });
+          }
+          
+          // Add document links
+          if (documentLinks.length > 0) {
+            formattedText += '\n\n**Dokumenty:**';
+            documentLinks.forEach(link => {
+              formattedText += `\n- [${link.title}](${link.url})`;
+            });
+          }
+        }
+      } else {
+        console.log('No links found to add to response');
+        
+        // Check if query appears to be asking for links or documentation
+        if (isAskingForDocs) {
+          formattedText += '\n\nNie znaleziono odpowiednich dokumentów dla tego zapytania. Proszę spróbować bardziej szczegółowego zapytania lub skontaktować się z naszym zespołem wsparcia, aby uzyskać pomoc w znalezieniu potrzebnych zasobów.';
+        }
+      }
       
       // Send response back to client
       socket.emit('message', {
         type: 'bot',
-        text: response,
-        timestamp: Date.now()
+        text: formattedText,
+        timestamp: Date.now(),
+        metadata: {
+          links: responseData.links
+        }
       });
 
     } catch (error) {
@@ -91,7 +190,7 @@ io.on('connection', (socket) => {
 
   // Handle typing indicators
   socket.on('typing', (data) => {
-    console.log('Typing indicator:', data);
+    // console.log('Typing indicator:', data);
   });
 
   // Handle disconnection

@@ -240,8 +240,39 @@ app.post('/api/documents/upload', (req, res, next) => {
 
     // Process the uploaded file
     const filePath = req.file.path;
+    const originalFilename = req.file.originalname;
     console.log('Processing file:', filePath);
 
+    // Special handling for output.json file
+    const isOutputJson = originalFilename === 'output.json' || path.basename(filePath).includes('output.json');
+    if (isOutputJson) {
+      console.log('Special handling for output.json file detected');
+      
+      // Skip duplicate check for output.json as we always want the latest version
+      documentService.processDocument(filePath, originalFilename)
+        .then(result => {
+          console.log('output.json processing result:', result);
+          return chromaService.getDocuments()
+            .then(updatedDocs => {
+              documents = updatedDocs;
+              res.json({ 
+                message: 'output.json file processed successfully',
+                result 
+              });
+            });
+        })
+        .catch(error => {
+          console.error('Error processing output.json:', error);
+          // Don't delete the file even if processing failed
+          res.status(500).json({ 
+            error: 'Failed to process output.json',
+            details: error.message
+          });
+        });
+      return;
+    }
+
+    // Regular file processing with duplicate check
     documentService.isDuplicate(filePath)
       .then(isDuplicate => {
         if (isDuplicate) {
@@ -256,7 +287,7 @@ app.post('/api/documents/upload', (req, res, next) => {
         }
 
         // Process the document
-        return documentService.processDocument(filePath, req.file!.originalname)
+        return documentService.processDocument(filePath, originalFilename)
           .then(result => {
             console.log('Document processing result:', result);
             return chromaService.getDocuments()
@@ -447,6 +478,37 @@ app.get('/api/chats/category/:category', (req, res) => {
   }
 });
 
+// Add endpoint to refresh the output.json reference
+app.post('/api/refresh-output-json', async (req, res) => {
+  try {
+    console.log("Refresh output.json endpoint called");
+    const success = await chromaService.refreshOutputJsonReference();
+    
+    if (success) {
+      // Update our local documents collection
+      const updatedDocs = await chromaService.getDocuments();
+      documents = updatedDocs;
+      
+      res.json({ 
+        success: true, 
+        message: 'Successfully refreshed output.json reference'
+      });
+    } else {
+      res.status(404).json({ 
+        success: false, 
+        message: 'Failed to refresh output.json - file not found or error occurred'
+      });
+    }
+  } catch (error) {
+    console.error('Error refreshing output.json:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to refresh output.json',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
 // WebSocket handling
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
@@ -457,64 +519,205 @@ io.on('connection', (socket) => {
     console.log('Message received:', data);
 
     try {
+      // Log the incoming query for debugging
+      console.log(`Processing query: "${data.text}"`);
+      
+      // Determine if the query is specifically asking for documentation or links
+      const isAskingForDocs = /document(ation)?|manual|guide|instruction|pdf|download|links?/i.test(data.text);
+      
       // Search for relevant documents
       const relevantDocs = await chromaService.search(data.text);
       
       if (!relevantDocs || relevantDocs.length === 0) {
-        throw new Error('No relevant documents found');
+        console.log('No relevant documents found for query');
+        
+        // Generate a response even when no documents are found
+        const fallbackResponse = await chromaService.generateResponse(data.text, 
+          "I don't have specific information about this in my knowledge base. " +
+          "Please ask for more details or try a different query.");
+        
+        socket.emit('message', {
+          type: 'bot',
+          text: fallbackResponse.text,
+          timestamp: Date.now(),
+          metadata: {
+            chatId: uuidv4(),
+            links: []
+          }
+        });
+        
+        return;
       }
       
-      // Combine relevant documents into context and collect links
-      const context = relevantDocs.map(doc => {
-        const metadata = doc.metadata || {};
-        const links = metadata.download_links || [];
-        const url = metadata.url || '';
-        return {
-          content: doc.pageContent,
-          links: links.map((link: DownloadLink) => ({
-            url: link.url,
-            text: link.text,
-            type: link.type
-          })),
-          sourceUrl: url
-        };
-      });
-
-      // Generate response using Claude with context
-      const response = await chromaService.generateResponse(data.text, context.map(c => c.content).join("\n"));
+      // Generate response using Claude with context including metadata
+      const responseData = await chromaService.generateResponse(data.text, relevantDocs);
       
-      // Format response to include links
-      const formattedResponse = context.flatMap(c => c.links).length > 0 
-        ? `${response}\n\nDostępne dokumenty:\n${context.flatMap(c => c.links)
-            .filter(link => link.type === 'application/pdf' || link.type === 'application/json')
-            .map(link => `- [${link.text}](${link.url})`)
-            .join('\n')}`
-        : response;
+      // Format the response with markdown links if there are any
+      let formattedText = responseData.text;
       
-      // Store the chat with links
+      // Process links to remove similar/duplicate pages
+      const processedLinks = responseData.links ? [...responseData.links] : [];
+      
+      // More aggressive grouping for links with the same base path
+      if (processedLinks.length > 0) {
+        const urlGroups = new Map<string, Array<typeof responseData.links[0]>>();
+        
+        // Group by base URL path (excluding query params)
+        processedLinks.forEach(link => {
+          try {
+            // Get base URL without query parameters and trailing slash
+            const url = new URL(link.url);
+            const baseUrl = (url.origin + url.pathname).replace(/\/$/, '');
+            
+            if (!urlGroups.has(baseUrl)) {
+              urlGroups.set(baseUrl, []);
+            }
+            urlGroups.get(baseUrl)!.push(link);
+          } catch (e) {
+            // If URL parsing fails, group by everything before ?
+            const fallbackGroup = link.url.split('?')[0].replace(/\/$/, '');
+            if (!urlGroups.has(fallbackGroup)) {
+              urlGroups.set(fallbackGroup, []);
+            }
+            urlGroups.get(fallbackGroup)!.push(link);
+          }
+        });
+        
+        // For each group, select the best link
+        const filteredLinks: Array<typeof responseData.links[0]> = [];
+        urlGroups.forEach((links, baseUrl) => {
+          if (links.length === 1) {
+            // If only one link in the group, keep it
+            filteredLinks.push(links[0]);
+          } else {
+            // If multiple links, prefer PDFs/documents over webpages
+            const documentLinks = links.filter((link: {type: string, url: string}) => 
+              link.type === 'application/pdf' || 
+              link.type === 'document' || 
+              link.url.includes('.pdf')
+            );
+            
+            if (documentLinks.length > 0) {
+              // Keep the first document link (should already be sorted by relevance)
+              filteredLinks.push(documentLinks[0]);
+            } else {
+              // Otherwise keep the one with shortest URL (no query params)
+              links.sort((a: {url: string}, b: {url: string}) => a.url.length - b.url.length);
+              filteredLinks.push(links[0]);
+            }
+          }
+        });
+        
+        // Update the processed links
+        console.log(`Reduced ${responseData.links.length} to ${filteredLinks.length} links after grouping similar URLs`);
+        responseData.links = filteredLinks;
+      }
+      
+      // Add links section if links are available
+      if (responseData.links && responseData.links.length > 0) {
+        console.log(`Adding ${responseData.links.length} links to response`);
+        
+        // If user specifically asked for documentation, put links at the top
+        if (isAskingForDocs) {
+          const tempText = formattedText;
+          formattedText = "**Znalezione dokumenty:**\n\n";
+          
+          // Group links by type
+          const webpageLinks = responseData.links.filter(link => link.type === 'webpage');
+          const documentLinks = responseData.links.filter(link => 
+            link.type === 'application/pdf' || 
+            link.type === 'document' || 
+            link.type.includes('pdf')
+          );
+          
+          // Add document links first since they were specifically requested
+          if (documentLinks.length > 0) {
+            formattedText += "**Dokumenty:**\n";
+            documentLinks.forEach(link => {
+              formattedText += `- [${link.title}](${link.url})\n`;
+            });
+            formattedText += "\n";
+          }
+          
+          // Add webpage links
+          if (webpageLinks.length > 0) {
+            formattedText += "**Strony internetowe:**\n";
+            webpageLinks.forEach(link => {
+              formattedText += `- [${link.title}](${link.url})\n`;
+            });
+            formattedText += "\n";
+          }
+          
+          // Add Claude's response after the links
+          formattedText += "**Odpowiedź:**\n\n" + tempText;
+        } else {
+          // Regular query - add links at the bottom
+          formattedText += '\n\n**Dostępne źródła:**';
+          
+          // Group links by type
+          const webpageLinks = responseData.links.filter(link => link.type === 'webpage');
+          const documentLinks = responseData.links.filter(link => 
+            link.type === 'application/pdf' || 
+            link.type === 'document' || 
+            link.type.includes('pdf')
+          );
+          
+          // Add webpage links
+          if (webpageLinks.length > 0) {
+            formattedText += '\n\n**Strony internetowe:**';
+            webpageLinks.forEach(link => {
+              formattedText += `\n- [${link.title}](${link.url})`;
+            });
+          }
+          
+          // Add document links
+          if (documentLinks.length > 0) {
+            formattedText += '\n\n**Dokumenty:**';
+            documentLinks.forEach(link => {
+              formattedText += `\n- [${link.title}](${link.url})`;
+            });
+          }
+        }
+      } else {
+        console.log('No links found to add to response');
+        
+        // Check if query appears to be asking for links or documentation
+        if (isAskingForDocs) {
+          formattedText += '\n\nNie znaleziono odpowiednich dokumentów dla tego zapytania. Proszę spróbować bardziej szczegółowego zapytania lub skontaktować się z naszym zespołem wsparcia, aby uzyskać pomoc w znalezieniu potrzebnych zasobów.';
+        }
+      }
+      
+      // Store the chat with links metadata
       const chat: Chat = {
         id: uuidv4(),
         question: data.text,
-        answer: formattedResponse,
+        answer: formattedText,
         timestamp: new Date(),
         resolved: false,
         metadata: {
-          relevantLinks: context.flatMap(c => c.links)
-            .filter(link => link.type === 'application/pdf' || link.type === 'application/json'),
-          sourceUrls: context.map(c => c.sourceUrl)
+          relevantLinks: responseData.links.map(link => ({
+            url: link.url,
+            text: link.title,
+            type: link.type
+          })),
+          sourceUrls: responseData.links
+            .filter(link => link.type === 'webpage')
+            .map(link => link.url)
         }
       };
+      
+      // Store chat in memory
       chats.set(chat.id, chat);
       
-      // Send response back to client with links
+      // Send response back to client
       socket.emit('message', {
         type: 'bot',
-        text: formattedResponse,
+        text: formattedText,
         timestamp: Date.now(),
-        chatId: chat.id,
-        links: context.flatMap(c => c.links)
-          .filter(link => link.type === 'application/pdf' || link.type === 'application/json'),
-        sourceUrls: context.map(c => c.sourceUrl)
+        metadata: {
+          chatId: chat.id,
+          links: responseData.links
+        }
       });
 
     } catch (error) {
@@ -547,6 +750,64 @@ server.on('error', (error) => {
   console.error('Server error:', error);
 });
 
+// Ensure output.json is available in uploads
+async function ensureOutputJsonAvailable() {
+  try {
+    // Create uploads directory if it doesn't exist
+    const uploadsDir = path.join(process.cwd(), 'uploads');
+    try {
+      await fs.promises.mkdir(uploadsDir, { recursive: true });
+      console.log("Ensured uploads directory exists");
+    } catch (err) {
+      console.error("Error creating uploads directory:", err);
+    }
+
+    // Check if output.json exists in uploads
+    const files = await fs.promises.readdir(uploadsDir);
+    const outputJsonFiles = files.filter(file => file.includes('output.json'));
+    
+    if (outputJsonFiles.length === 0) {
+      console.log("No output.json found in uploads, checking source directories");
+      
+      // Look for output.json in common source directories
+      const potentialSources = [
+        path.join(process.cwd(), '../scrapy/roger/output.json'),
+        path.join(process.cwd(), '../scrapy/output.json'),
+        path.join(process.cwd(), 'output.json')
+      ];
+      
+      let sourcePath = null;
+      for (const source of potentialSources) {
+        try {
+          await fs.promises.access(source);
+          sourcePath = source;
+          console.log(`Found output.json at: ${source}`);
+          break;
+        } catch (err) {
+          // File doesn't exist, try next path
+        }
+      }
+      
+      if (sourcePath) {
+        // Copy the file to uploads directory
+        const destPath = path.join(uploadsDir, 'output.json');
+        await fs.promises.copyFile(sourcePath, destPath);
+        console.log(`Copied output.json from ${sourcePath} to ${destPath}`);
+        return true;
+      } else {
+        console.warn("Could not find output.json in any common locations");
+        return false;
+      }
+    } else {
+      console.log(`Found existing output.json in uploads: ${outputJsonFiles[0]}`);
+      return true;
+    }
+  } catch (err) {
+    console.error("Error ensuring output.json is available:", err);
+    return false;
+  }
+}
+
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   console.log(`WebSocket server is running on ws://localhost:${PORT}`);
@@ -556,4 +817,31 @@ server.listen(PORT, () => {
   // Test the server is actually listening
   const address = server.address();
   console.log('Server address:', address);
+  
+  // Initialize the system - ensure output.json is loaded
+  (async () => {
+    try {
+      console.log("Initializing system - ensuring output.json reference is available");
+      
+      // Ensure the file exists in uploads
+      const fileAvailable = await ensureOutputJsonAvailable();
+      
+      // Only refresh if the file is available or found
+      if (fileAvailable) {
+        // Give a moment for the server to fully initialize
+        setTimeout(async () => {
+          const success = await chromaService.refreshOutputJsonReference();
+          if (success) {
+            console.log("Successfully initialized output.json reference on startup");
+          } else {
+            console.warn("Unable to initialize output.json reference on startup");
+          }
+        }, 2000);
+      } else {
+        console.warn("Output.json file not found, system will operate without it");
+      }
+    } catch (error) {
+      console.error("Error during system initialization:", error);
+    }
+  })();
 }); 
