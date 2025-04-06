@@ -24,13 +24,3 @@ cd backend
 npm run build
 npm start
 ```
-
-The reason you're not seeing the "TEST" logs is because:
-1. The Chroma service runs in a separate Docker container
-2. Changes to the backend code don't automatically propagate to the Docker container
-3. The Docker container needs to be restarted to pick up any changes
-
-Would you like me to help you:
-1. Check if Docker is running?
-2. Restart the Docker container?
-3. Verify the logs are now showing up?

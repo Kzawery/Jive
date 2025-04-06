@@ -116,10 +116,24 @@ export class DocumentService {
           return pdfData.text;
           
         case '.json':
-          const jsonContent = await fs.readFile(filePath, 'utf-8');
-          const jsonData = JSON.parse(jsonContent);
-          // Convert JSON to searchable text format
-          return this.jsonToText(jsonData);
+          try {
+            const jsonContent = await fs.readFile(filePath, 'utf-8');
+            if (!jsonContent.trim()) {
+              throw new Error('JSON file is empty');
+            }
+            const jsonData = JSON.parse(jsonContent);
+            if (!jsonData || typeof jsonData !== 'object') {
+              throw new Error('Invalid JSON structure');
+            }
+            // Convert JSON to searchable text format
+            return this.jsonToText(jsonData);
+          } catch (error: unknown) {
+            console.error('Error processing JSON file:', error);
+            if (error instanceof Error) {
+              throw new Error(`Failed to process JSON file: ${error.message}`);
+            }
+            throw new Error('Failed to process JSON file: Unknown error');
+          }
           
         default:
           throw new Error(`Unsupported file type: ${extension}`);
