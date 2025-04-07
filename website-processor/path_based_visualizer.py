@@ -1,6 +1,7 @@
 import json
 import os
 import sys
+import re
 from rich.console import Console
 from rich.tree import Tree
 from rich.table import Table
@@ -30,13 +31,39 @@ class PathBasedVisualizer:
         self.navigation_history = ["/"]
         self.history_position = 0
     
-    def _build_path_map(self, node):
-        """Recursively build a map of all nodes by path"""
+    def _build_path_map(self, node, parent_path=None):
+        """Recursively build a map of all nodes by path with enhanced content extraction"""
         if "path" in node:
             self.nodes_by_path[node["path"]] = node
-        
+            
+            # Enhanced content extraction for search
+            # Include metadata from the node to make it more searchable
+            searchable_content = []
+            
+            if "title" in node and node["title"]:
+                searchable_content.append(node["title"])
+                
+            if "content" in node and node["content"]:
+                searchable_content.append(node["content"])
+                
+            # Extract filenames and version numbers from content for better firmware searches
+            if "content" in node and node["content"]:
+                content = node["content"]
+                
+                # Look for patterns like "ProductName Firmware v1.2.3.45"
+                firmware_pattern = re.compile(r'(\w+[-\s]?\w+)\s+Firmware\s+v\.?(\d+\.\d+\.\d+\.?\d*)', re.IGNORECASE)
+                firmware_matches = firmware_pattern.findall(content)
+                
+                for product, version in firmware_matches:
+                    searchable_content.append(f"{product} Firmware v{version}")
+                    searchable_content.append(f"Firmware {product}")
+                    searchable_content.append(f"v{version}")
+            
+            # Store the searchable content
+            node["_searchable_content"] = " ".join(searchable_content)
+            
         for child in node.get("children", []):
-            self._build_path_map(child)
+            self._build_path_map(child, node["path"] if "path" in node else None)
     
     def display_summary(self):
         """Display a summary of the website structure"""
@@ -311,8 +338,9 @@ class PathBasedVisualizer:
                 self.console.print(f"  {idx}. {child.get('title', 'Untitled')} (path: {child['path']})")
     
     def search_nodes(self, query):
-        """Search for nodes containing the query in title or content"""
-        query = query.lower()
+        """Search for nodes containing the query with enhanced matching"""
+        # Convert query to lowercase for case-insensitive search
+        query_terms = query.lower().split()
         results = []
         
         # Search in all nodes
@@ -320,11 +348,53 @@ class PathBasedVisualizer:
             if node is None:
                 continue
                 
+            # Get searchable fields
             title = node.get("title", "").lower() if node.get("title") else ""
             content = node.get("content", "").lower() if node.get("content") else ""
+            path_text = path.lower()
+            searchable_content = node.get("_searchable_content", "").lower()
             
-            if query in title or query in content:
-                results.append(node)
+            # Score the node based on matches
+            score = 0
+            matches = False
+            
+            # Check for exact matches first (highest priority)
+            if query.lower() in title:
+                score += 10
+                matches = True
+            if query.lower() in content:
+                score += 5
+                matches = True
+            if query.lower() in path_text:
+                score += 3
+                matches = True
+            if query.lower() in searchable_content:
+                score += 8
+                matches = True
+                
+            # If no exact matches, try matching individual terms
+            if not matches:
+                for term in query_terms:
+                    # Check for term in various fields
+                    if term in title:
+                        score += 5
+                        matches = True
+                    if term in content:
+                        score += 3
+                        matches = True
+                    if term in path_text:
+                        score += 2
+                        matches = True
+                    if term in searchable_content:
+                        score += 4
+                        matches = True
+            
+            # Add to results if any match was found
+            if matches:
+                results.append((node, score))
+        
+        # Sort results by score (highest first)
+        results.sort(key=lambda x: x[1], reverse=True)
         
         # Display results
         self.console.print(f"\n[bold green]Search Results for '{query}':[/bold green]")
@@ -337,18 +407,148 @@ class PathBasedVisualizer:
         table.add_column("Title", style="green")
         table.add_column("Path", style="blue")
         table.add_column("Category", style="magenta")
+        table.add_column("Relevance", style="cyan")
         
-        for node in results:
+        for node, score in results:
             table.add_row(
                 node.get("title", "Untitled"),
                 node.get("path", ""),
-                node.get("category", "")
+                node.get("category", ""),
+                str(score)
             )
         
         self.console.print(table)
         self.console.print(f"Found {len(results)} results")
         self.console.print("\nUse 'navigate <path>' to view details for a specific result")
     
+    def display_file_structure(self, max_depth=None, output_file=None):
+        """Display the website structure exactly like a file structure tree"""
+        self.console.print("\n[bold green]Website File Structure[/bold green]")
+        
+        # Start with the root node
+        root_node = self.master_node
+        
+        # Print the root node
+        root_label = f"[bold cyan]{root_node.get('title', 'Root')}[/bold cyan] (path: {root_node['path']})"
+        if "url" in root_node:
+            root_label += f" ({root_node['url']})"
+        self.console.print(root_label)
+        
+        # If output file is specified, open it for writing
+        output_fh = None
+        if output_file:
+            try:
+                output_fh = open(output_file, 'w', encoding='utf-8')
+                # Write the root node to file
+                output_fh.write(f"Website File Structure\n\n")
+                output_fh.write(f"{root_node.get('title', 'Root')} (path: {root_node['path']})")
+                if "url" in root_node:
+                    output_fh.write(f" ({root_node['url']})")
+                output_fh.write("\n")
+            except IOError as e:
+                self.console.print(f"[red]Error opening output file: {e}[/red]")
+                output_fh = None
+        
+        # Get all children of the root, recursively
+        self._print_children(root_node, "", max_depth, 1, output_fh)
+        
+        # Close the output file if it was opened
+        if output_fh:
+            output_fh.close()
+            self.console.print(f"\n[green]File structure saved to: {output_file}[/green]")
+
+    def _print_children(self, node, prefix="", max_depth=None, current_depth=1, output_fh=None):
+        """Recursively print all children with proper file-structure indentation"""
+        if not node.get("children"):
+            return
+            
+        # Get a sorted list of children for consistent display
+        children = sorted(node["children"], key=lambda x: x["path"])
+        
+        # Check if we've reached max depth
+        if max_depth is not None and current_depth > max_depth:
+            remaining = len(self._count_all_descendants(node))
+            if remaining > 0:
+                line = f"{prefix}└── ... ({remaining} more items not shown)"
+                self.console.print(line)
+                if output_fh:
+                    output_fh.write(line + "\n")
+            return
+        
+        # Process each child
+        for i, child in enumerate(children):
+            is_last = (i == len(children) - 1)
+            
+            # Determine the connector based on whether this is the last child
+            connector = "└── " if is_last else "├── "
+            
+            # Determine icon based on node type
+            if child.get("is_product", False):
+                icon = "🛒"  # Product page
+            elif "case_study" in child.get("category", "").lower():
+                icon = "📊"  # Case study
+            elif "blog" in child.get("path", "").lower():
+                icon = "📝"  # Blog
+            elif "file" in child.get("path", "").lower():
+                icon = "📄"  # File
+            elif "firmware" in child.get("path", "").lower() or "firmware" in child.get("title", "").lower():
+                icon = "⚙️"  # Firmware files
+            else:
+                icon = "🔗"  # Regular page
+                
+            # Get path parts
+            path = child.get("path", "").strip("/")
+            path_parts = path.split("/")
+            
+            # Create node label
+            title = child.get("title", "Untitled")
+            
+            # Print each path part with proper indentation
+            for j, part in enumerate(path_parts):
+                is_last_part = (j == len(path_parts) - 1)
+                is_last_in_group = is_last and is_last_part
+                
+                # Determine connector for this part
+                part_connector = "└── " if is_last_in_group else "├── "
+                
+                # Create the line
+                if is_last_part:
+                    # Last part shows the full information
+                    label = f"{icon} {title}"
+                    if "common_blocks" in child and child["common_blocks"]:
+                        label += f" ({len(child['common_blocks'])} blocks)"
+                else:
+                    # Intermediate parts just show the directory name
+                    label = f"{part}/"
+                
+                # Calculate indentation
+                part_prefix = prefix + ("    " * j)
+                
+                # Print the line
+                line = f"{part_prefix}{part_connector}{label}"
+                self.console.print(line)
+                if output_fh:
+                    output_fh.write(line + "\n")
+            
+            # Prepare the prefix for children of this node
+            child_prefix = prefix + ("    " if is_last else "│   ")
+            
+            # Recursively print children
+            self._print_children(child, child_prefix, max_depth, current_depth + 1, output_fh)
+
+    def _count_all_descendants(self, node):
+        """Count all descendants of a node"""
+        descendants = []
+        
+        if not node.get("children"):
+            return descendants
+            
+        for child in node["children"]:
+            descendants.append(child)
+            descendants.extend(self._count_all_descendants(child))
+            
+        return descendants
+
     def interactive_mode(self):
         """Run in interactive mode allowing user to explore the website structure"""
         self.console.print("[bold cyan]Path-Based Website Structure Visualizer[/bold cyan]")
@@ -378,6 +578,27 @@ class PathBasedVisualizer:
                     self.display_tree(depth)
                 except (IndexError, ValueError):
                     self.console.print("[red]Invalid depth. Usage: tree [depth][/red]")
+            elif command.lower() == "filetree":
+                # New command for file-structure style tree
+                self.display_file_structure()
+            elif command.lower().startswith("filetree "):
+                # New command with depth parameter and optional output file
+                parts = command.split()
+                if len(parts) == 2:
+                    try:
+                        depth = int(parts[1])
+                        self.display_file_structure(depth)
+                    except ValueError:
+                        self.console.print("[red]Invalid depth. Usage: filetree [depth] [output_file][/red]")
+                elif len(parts) == 3:
+                    try:
+                        depth = int(parts[1])
+                        output_file = parts[2]
+                        self.display_file_structure(depth, output_file)
+                    except ValueError:
+                        self.console.print("[red]Invalid depth. Usage: filetree [depth] [output_file][/red]")
+                else:
+                    self.console.print("[red]Invalid command. Usage: filetree [depth] [output_file][/red]")
             elif command.lower() == "blocks":
                 self.display_common_blocks()
             elif command.lower().startswith("block "):
@@ -475,6 +696,7 @@ class PathBasedVisualizer:
         table.add_row("help", "Show this help message")
         table.add_row("summary", "Display a summary of the website structure")
         table.add_row("tree [depth]", "Display the website structure as a tree (optional depth)")
+        table.add_row("filetree [depth]", "Display the website structure as a file-like tree (optional depth)")
         table.add_row("exit/quit", "Exit the visualizer")
         
         self.console.print(table)
@@ -506,7 +728,7 @@ class PathBasedVisualizer:
         
         content_table.add_row("blocks", "List all common content blocks")
         content_table.add_row("block [id]", "Display details for a specific content block")
-        content_table.add_row("search [query]", "Search for nodes containing the query")
+        content_table.add_row("search [query]", "Search for nodes containing the query (enhanced)")
         
         self.console.print(content_table)
 

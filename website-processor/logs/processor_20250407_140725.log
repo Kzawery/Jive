@@ -1,0 +1,34 @@
+2025-04-07 14:07:25 [INFO] Initialized website processor
+2025-04-07 14:07:25 [INFO] Processing file: .\test.json
+2025-04-07 14:07:25 [INFO] Loading data from .\test.json
+2025-04-07 14:07:25 [INFO] Successfully parsed JSON with 88 pages
+2025-04-07 14:07:25 [INFO] Successfully loaded 88 pages in 0.00 seconds
+2025-04-07 14:07:25 [INFO] Creating nodes for all pages
+2025-04-07 14:07:25 [INFO] Domain detected: www.roger.pl
+2025-04-07 14:07:25 [INFO] Created 88 nodes in total
+2025-04-07 14:07:25 [INFO] Created nodes in 0.00 seconds
+2025-04-07 14:07:25 [INFO] Building tree structure based on paths
+2025-04-07 14:07:25 [INFO] Tree structure built: 87 nodes connected to parents, 0 orphaned nodes attached to root
+2025-04-07 14:07:25 [INFO] Built tree structure in 0.00 seconds
+2025-04-07 14:07:25 [INFO] Extracting common content blocks
+2025-04-07 14:07:25 [INFO] Extracting predefined content blocks (header, footer, etc.)
+2025-04-07 14:07:25 [INFO] Identified common header used on 56 pages
+2025-04-07 14:07:25 [INFO] Identified predefined useful links section on 31 pages
+2025-04-07 14:07:25 [INFO] Extracted 2 predefined common blocks
+2025-04-07 14:07:25 [INFO] Auto-detected 0 additional common blocks
+2025-04-07 14:07:25 [INFO] Total common blocks extracted: 2
+2025-04-07 14:07:25 [INFO] Extracted common blocks in 0.00 seconds
+2025-04-07 14:07:25 [INFO] Replacing common blocks in node content with references
+2025-04-07 14:07:25 [INFO] Prepared 2 blocks for replacement (sorted by size)
+2025-04-07 14:07:25 [INFO] Completed block replacement. Processed 86 nodes with content.
+2025-04-07 14:07:25 [INFO] Made 29 block replacements in total.
+2025-04-07 14:07:25 [INFO] Most frequently used blocks:
+2025-04-07 14:07:25 [INFO]   useful_links (useful_links): Used on 28 pages
+2025-04-07 14:07:25 [INFO]   site_header (header): Used on 1 pages
+2025-04-07 14:07:25 [INFO] Replaced common blocks in 0.00 seconds
+2025-04-07 14:07:25 [INFO] Exporting processed data to .\website_structure_path_based.json
+2025-04-07 14:07:25 [INFO] Content size reduction: 190,209 -> 187,991 bytes (1.2% savings)
+2025-04-07 14:07:25 [INFO] Export complete. Saved 88 nodes and 2 common blocks.
+2025-04-07 14:07:25 [INFO] Exported data in 0.00 seconds
+2025-04-07 14:07:25 [INFO] Processing complete. Total time: 0.01 seconds
+2025-04-07 14:07:25 [INFO] Output saved to: .\website_structure_path_based.json

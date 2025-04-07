@@ -88,14 +88,14 @@ class PathBasedWebsiteProcessor:
         """Load and parse the JSON data from the input file"""
         try:
             self.logger.info(f"Loading data from {self.input_file}")
-            with open(self.input_file, 'r', encoding='utf-8') as f:
-                content = f.read()
+        with open(self.input_file, 'r', encoding='utf-8') as f:
+            content = f.read()
                 self.pages = json.loads(content)
             self.logger.info(f"Successfully parsed JSON with {len(self.pages)} pages")
             return True
         except (json.JSONDecodeError, FileNotFoundError) as e:
             self.logger.error(f"Error loading data: {e}")
-            return False
+                return False
     
     def _create_nodes(self):
         """Create nodes for all pages"""
@@ -192,7 +192,7 @@ class PathBasedWebsiteProcessor:
                     parent_node.add_child(node)
                     parent_found = True
                     connected_count += 1
-                    break
+                            break
             
             # If no parent found, attach to master node
             if not parent_found:
@@ -220,8 +220,8 @@ class PathBasedWebsiteProcessor:
                 self.logger.warning(f"  Duplicate path: {path}")
             if len(duplicate_paths) > 5:
                 self.logger.warning(f"  ...and {len(duplicate_paths) - 5} more")
-                
-    def _extract_common_blocks(self):
+
+    def _extract_common_blocks(self, use_ai = False):
         """Find and extract common content blocks"""
         self.logger.info("Extracting common content blocks")
         
@@ -229,9 +229,9 @@ class PathBasedWebsiteProcessor:
         self._extract_predefined_blocks()
         predefined_count = len(self.common_blocks)
         self.logger.info(f"Extracted {predefined_count} predefined common blocks")
-        
-        # Then, intelligently detect other repeated blocks
-        self._detect_repeated_content_blocks()
+        if use_ai:
+            # Then, intelligently detect other repeated blocks
+            self._detect_repeated_content_blocks()
         total_count = len(self.common_blocks)
         auto_detected_count = total_count - predefined_count
         self.logger.info(f"Auto-detected {auto_detected_count} additional common blocks")

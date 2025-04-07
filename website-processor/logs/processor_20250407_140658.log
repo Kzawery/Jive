@@ -1,0 +1,17 @@
+2025-04-07 14:06:58 [INFO] Initialized website processor
+2025-04-07 14:06:58 [INFO] Processing file: .\test.json
+2025-04-07 14:06:58 [INFO] Loading data from .\test.json
+2025-04-07 14:06:58 [INFO] Successfully parsed JSON with 88 pages
+2025-04-07 14:06:58 [INFO] Successfully loaded 88 pages in 0.00 seconds
+2025-04-07 14:06:58 [INFO] Creating nodes for all pages
+2025-04-07 14:06:58 [INFO] Domain detected: www.roger.pl
+2025-04-07 14:06:58 [INFO] Created 88 nodes in total
+2025-04-07 14:06:58 [INFO] Created nodes in 0.00 seconds
+2025-04-07 14:06:58 [INFO] Building tree structure based on paths
+2025-04-07 14:06:58 [INFO] Tree structure built: 87 nodes connected to parents, 0 orphaned nodes attached to root
+2025-04-07 14:06:58 [INFO] Built tree structure in 0.00 seconds
+2025-04-07 14:06:58 [INFO] Extracting common content blocks
+2025-04-07 14:06:58 [INFO] Extracting predefined content blocks (header, footer, etc.)
+2025-04-07 14:06:58 [INFO] Identified common header used on 56 pages
+2025-04-07 14:06:58 [INFO] Identified predefined useful links section on 31 pages
+2025-04-07 14:06:58 [INFO] Extracted 2 predefined common blocks
