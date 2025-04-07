@@ -1,0 +1,22 @@
+2025-04-07 13:30:06 [INFO] Initialized website processor
+2025-04-07 13:30:06 [INFO] Processing file: test.json
+2025-04-07 13:30:06 [INFO] Loading data from test.json
+2025-04-07 13:30:06 [INFO] Successfully parsed JSON with 247 pages
+2025-04-07 13:30:06 [INFO] Successfully loaded 247 pages in 0.00 seconds
+2025-04-07 13:30:06 [INFO] Creating nodes for all pages
+2025-04-07 13:30:06 [INFO] Domain detected: www.roger.pl
+2025-04-07 13:30:06 [INFO] Created 247 nodes in total
+2025-04-07 13:30:06 [INFO] Created nodes in 0.00 seconds
+2025-04-07 13:30:06 [INFO] Building tree structure based on paths
+2025-04-07 13:30:06 [INFO] Tree structure built: 246 nodes connected to parents, 0 orphaned nodes attached to root
+2025-04-07 13:30:06 [INFO] Built tree structure in 0.00 seconds
+2025-04-07 13:30:06 [INFO] Extracting common content blocks
+2025-04-07 13:30:06 [INFO] Extracting predefined content blocks (header, footer, etc.)
+2025-04-07 13:30:06 [INFO] Identified common header used on 146 pages
+2025-04-07 13:30:06 [INFO] Identified predefined useful links section on 46 pages
+2025-04-07 13:30:06 [INFO] Extracted 2 predefined common blocks
+2025-04-07 13:30:06 [INFO] Starting intelligent content block detection
+2025-04-07 13:30:06 [INFO] Splitting content into potential blocks for analysis
+2025-04-07 13:30:06 [INFO] Extracted 2047 content chunks for analysis
+2025-04-07 13:30:06 [INFO] Finding similar chunks that appear across multiple pages
+2025-04-07 13:30:06 [INFO] Beginning similarity comparison of 2047 chunks (approx. 2,094,081 comparisons)

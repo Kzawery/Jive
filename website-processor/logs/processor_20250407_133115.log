@@ -1,0 +1,84 @@
+2025-04-07 13:31:15 [INFO] Initialized website processor
+2025-04-07 13:31:15 [INFO] Processing file: test.json
+2025-04-07 13:31:15 [INFO] Loading data from test.json
+2025-04-07 13:31:15 [INFO] Successfully parsed JSON with 88 pages
+2025-04-07 13:31:15 [INFO] Successfully loaded 88 pages in 0.00 seconds
+2025-04-07 13:31:15 [INFO] Creating nodes for all pages
+2025-04-07 13:31:15 [INFO] Domain detected: www.roger.pl
+2025-04-07 13:31:15 [INFO] Created 88 nodes in total
+2025-04-07 13:31:15 [INFO] Created nodes in 0.00 seconds
+2025-04-07 13:31:15 [INFO] Building tree structure based on paths
+2025-04-07 13:31:15 [INFO] Tree structure built: 87 nodes connected to parents, 0 orphaned nodes attached to root
+2025-04-07 13:31:15 [INFO] Built tree structure in 0.00 seconds
+2025-04-07 13:31:15 [INFO] Extracting common content blocks
+2025-04-07 13:31:15 [INFO] Extracting predefined content blocks (header, footer, etc.)
+2025-04-07 13:31:15 [INFO] Identified common header used on 56 pages
+2025-04-07 13:31:15 [INFO] Identified predefined useful links section on 31 pages
+2025-04-07 13:31:15 [INFO] Extracted 2 predefined common blocks
+2025-04-07 13:31:15 [INFO] Starting intelligent content block detection
+2025-04-07 13:31:15 [INFO] Splitting content into potential blocks for analysis
+2025-04-07 13:31:15 [INFO] Extracted 789 content chunks for analysis
+2025-04-07 13:31:15 [INFO] Finding similar chunks that appear across multiple pages
+2025-04-07 13:31:15 [INFO] Beginning similarity comparison of 789 chunks (approx. 310,866 comparisons)
+2025-04-07 13:31:22 [INFO] Comparison progress: 5.0% (15,543/310,866)
+2025-04-07 13:31:29 [INFO] Comparison progress: 10.0% (31,086/310,866)
+2025-04-07 13:31:37 [INFO] Comparison progress: 15.0% (46,629/310,866)
+2025-04-07 13:31:45 [INFO] Comparison progress: 20.0% (62,172/310,866)
+2025-04-07 13:31:50 [INFO] Comparison progress: 25.0% (77,715/310,866)
+2025-04-07 13:31:58 [INFO] Comparison progress: 30.0% (93,258/310,866)
+2025-04-07 13:32:03 [INFO] Comparison progress: 35.0% (108,801/310,866)
+2025-04-07 13:32:08 [INFO] Comparison progress: 40.0% (124,344/310,866)
+2025-04-07 13:32:15 [INFO] Comparison progress: 45.0% (139,887/310,866)
+2025-04-07 13:32:21 [INFO] Comparison progress: 50.0% (155,430/310,866)
+2025-04-07 13:32:29 [INFO] Comparison progress: 55.0% (170,973/310,866)
+2025-04-07 13:32:34 [INFO] Comparison progress: 60.0% (186,516/310,866)
+2025-04-07 13:32:41 [INFO] Comparison progress: 65.0% (202,059/310,866)
+2025-04-07 13:32:50 [INFO] Comparison progress: 70.0% (217,602/310,866)
+2025-04-07 13:32:56 [INFO] Comparison progress: 75.0% (233,145/310,866)
+2025-04-07 13:33:03 [INFO] Comparison progress: 80.0% (248,688/310,866)
+2025-04-07 13:33:08 [INFO] Comparison progress: 85.0% (264,231/310,866)
+2025-04-07 13:33:14 [INFO] Comparison progress: 90.0% (279,774/310,866)
+2025-04-07 13:33:20 [INFO] Comparison progress: 95.0% (295,317/310,866)
+2025-04-07 13:33:28 [INFO] Comparison progress: 100.0% (310,860/310,866)
+2025-04-07 13:33:35 [INFO] Comparison progress: 105.0% (326,403/310,866)
+2025-04-07 13:33:43 [INFO] Comparison progress: 110.0% (341,946/310,866)
+2025-04-07 13:33:50 [INFO] Comparison progress: 115.0% (357,489/310,866)
+2025-04-07 13:33:58 [INFO] Comparison progress: 120.0% (373,032/310,866)
+2025-04-07 13:34:04 [INFO] Comparison progress: 125.0% (388,575/310,866)
+2025-04-07 13:34:10 [INFO] Comparison progress: 130.0% (404,118/310,866)
+2025-04-07 13:34:17 [INFO] Comparison progress: 135.0% (419,661/310,866)
+2025-04-07 13:34:22 [INFO] Comparison progress: 140.0% (435,204/310,866)
+2025-04-07 13:34:28 [INFO] Comparison progress: 145.0% (450,747/310,866)
+2025-04-07 13:34:35 [INFO] Comparison progress: 150.0% (466,290/310,866)
+2025-04-07 13:34:40 [INFO] Comparison progress: 155.0% (481,833/310,866)
+2025-04-07 13:34:45 [INFO] Comparison progress: 160.0% (497,376/310,866)
+2025-04-07 13:34:49 [INFO] Comparison progress: 165.0% (512,919/310,866)
+2025-04-07 13:34:53 [INFO] Comparison progress: 170.0% (528,462/310,866)
+2025-04-07 13:34:57 [INFO] Comparison progress: 175.0% (544,005/310,866)
+2025-04-07 13:35:02 [INFO] Comparison progress: 180.0% (559,548/310,866)
+2025-04-07 13:35:07 [INFO] Found 13 potential repeated content blocks
+2025-04-07 13:35:07 [INFO] Classifying and adding repeated blocks
+2025-04-07 13:35:07 [INFO] Added 10/13 blocks so far...
+2025-04-07 13:35:07 [INFO] Added auto-detected block auto_block_12 (content_block_12): Type: content_block, Occurrences: 3, Preview: Laboratory PN-EN 50130 -4 PN-EN 55022 EMC --------...
+2025-04-07 13:35:07 [INFO] Added 13 auto-detected blocks to the common blocks dictionary
+2025-04-07 13:35:07 [INFO] Block detection stats: Processed 0 chunks, found 0 potential blocks, added 0 blocks.
+2025-04-07 13:35:07 [INFO] Auto-detected 13 additional common blocks
+2025-04-07 13:35:07 [INFO] Total common blocks extracted: 15
+2025-04-07 13:35:07 [INFO] Extracted common blocks in 231.87 seconds
+2025-04-07 13:35:07 [INFO] Replacing common blocks in node content with references
+2025-04-07 13:35:07 [INFO] Prepared 15 blocks for replacement (sorted by size)
+2025-04-07 13:35:07 [INFO] Completed block replacement. Processed 86 nodes with content.
+2025-04-07 13:35:07 [INFO] Made 61 block replacements in total.
+2025-04-07 13:35:07 [INFO] Most frequently used blocks:
+2025-04-07 13:35:07 [INFO]   useful_links (useful_links): Used on 28 pages
+2025-04-07 13:35:07 [INFO]   navigation_2 (auto_block_2): Used on 4 pages
+2025-04-07 13:35:07 [INFO]   navigation_6 (auto_block_6): Used on 3 pages
+2025-04-07 13:35:07 [INFO]   navigation_5 (auto_block_5): Used on 3 pages
+2025-04-07 13:35:07 [INFO]   content_block_4 (auto_block_4): Used on 3 pages
+2025-04-07 13:35:07 [INFO]   content_block_3 (auto_block_3): Used on 3 pages
+2025-04-07 13:35:07 [INFO]   content_block_8 (auto_block_8): Used on 3 pages
+2025-04-07 13:35:07 [INFO]   product_list_7 (auto_block_7): Used on 3 pages
+2025-04-07 13:35:07 [INFO]   content_block_13 (auto_block_13): Used on 2 pages
+2025-04-07 13:35:07 [INFO]   content_block_12 (auto_block_12): Used on 2 pages
+2025-04-07 13:35:07 [INFO] Replaced common blocks in 0.01 seconds
+2025-04-07 13:35:07 [INFO] Exporting processed data to .\website_structure_path_based.json

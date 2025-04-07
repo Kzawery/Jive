@@ -1,0 +1,86 @@
+2025-04-07 13:38:16 [INFO] Initialized website processor
+2025-04-07 13:38:16 [INFO] Processing file: test.json
+2025-04-07 13:38:16 [INFO] Loading data from test.json
+2025-04-07 13:38:16 [INFO] Successfully parsed JSON with 30 pages
+2025-04-07 13:38:16 [INFO] Successfully loaded 30 pages in 0.00 seconds
+2025-04-07 13:38:16 [INFO] Creating nodes for all pages
+2025-04-07 13:38:16 [INFO] Domain detected: www.roger.pl
+2025-04-07 13:38:16 [INFO] Created 30 nodes in total
+2025-04-07 13:38:16 [INFO] Created nodes in 0.00 seconds
+2025-04-07 13:38:16 [INFO] Building tree structure based on paths
+2025-04-07 13:38:16 [INFO] Tree structure built: 29 nodes connected to parents, 0 orphaned nodes attached to root
+2025-04-07 13:38:16 [INFO] Built tree structure in 0.00 seconds
+2025-04-07 13:38:16 [INFO] Extracting common content blocks
+2025-04-07 13:38:16 [INFO] Extracting predefined content blocks (header, footer, etc.)
+2025-04-07 13:38:16 [INFO] Identified common header used on 25 pages
+2025-04-07 13:38:16 [INFO] Identified predefined useful links section on 17 pages
+2025-04-07 13:38:16 [INFO] Extracted 2 predefined common blocks
+2025-04-07 13:38:16 [INFO] Starting intelligent content block detection
+2025-04-07 13:38:16 [INFO] Splitting content into potential blocks for analysis
+2025-04-07 13:38:16 [INFO] Extracted 326 content chunks for analysis
+2025-04-07 13:38:16 [INFO] Finding similar chunks that appear across multiple pages
+2025-04-07 13:38:16 [INFO] Beginning similarity comparison of 326 chunks (approx. 52,975 comparisons)
+2025-04-07 13:38:16 [INFO] Comparison progress: 5.0% (2,648/52,975)
+2025-04-07 13:38:18 [INFO] Comparison progress: 10.0% (5,296/52,975)
+2025-04-07 13:38:19 [INFO] Comparison progress: 15.0% (7,944/52,975)
+2025-04-07 13:38:21 [INFO] Comparison progress: 20.0% (10,592/52,975)
+2025-04-07 13:38:22 [INFO] Comparison progress: 25.0% (13,240/52,975)
+2025-04-07 13:38:23 [INFO] Comparison progress: 30.0% (15,888/52,975)
+2025-04-07 13:38:24 [INFO] Comparison progress: 35.0% (18,536/52,975)
+2025-04-07 13:38:26 [INFO] Comparison progress: 40.0% (21,184/52,975)
+2025-04-07 13:38:27 [INFO] Comparison progress: 45.0% (23,832/52,975)
+2025-04-07 13:38:28 [INFO] Comparison progress: 50.0% (26,480/52,975)
+2025-04-07 13:38:29 [INFO] Comparison progress: 55.0% (29,128/52,975)
+2025-04-07 13:38:30 [INFO] Comparison progress: 60.0% (31,776/52,975)
+2025-04-07 13:38:31 [INFO] Comparison progress: 65.0% (34,424/52,975)
+2025-04-07 13:38:32 [INFO] Comparison progress: 70.0% (37,072/52,975)
+2025-04-07 13:38:33 [INFO] Comparison progress: 75.0% (39,720/52,975)
+2025-04-07 13:38:34 [INFO] Comparison progress: 80.0% (42,368/52,975)
+2025-04-07 13:38:35 [INFO] Comparison progress: 85.0% (45,016/52,975)
+2025-04-07 13:38:36 [INFO] Comparison progress: 90.0% (47,664/52,975)
+2025-04-07 13:38:36 [INFO] Comparison progress: 95.0% (50,312/52,975)
+2025-04-07 13:38:37 [INFO] Comparison progress: 100.0% (52,960/52,975)
+2025-04-07 13:38:38 [INFO] Comparison progress: 100.0% (55,608/52,975)
+2025-04-07 13:38:39 [INFO] Comparison progress: 100.0% (58,256/52,975)
+2025-04-07 13:38:40 [INFO] Comparison progress: 100.0% (60,904/52,975)
+2025-04-07 13:38:41 [INFO] Comparison progress: 100.0% (63,552/52,975)
+2025-04-07 13:38:42 [INFO] Comparison progress: 100.0% (66,200/52,975)
+2025-04-07 13:38:43 [INFO] Comparison progress: 100.0% (68,848/52,975)
+2025-04-07 13:38:44 [INFO] Comparison progress: 100.0% (71,496/52,975)
+2025-04-07 13:38:45 [INFO] Comparison progress: 100.0% (74,144/52,975)
+2025-04-07 13:38:46 [INFO] Comparison progress: 100.0% (76,792/52,975)
+2025-04-07 13:38:47 [INFO] Comparison progress: 100.0% (79,440/52,975)
+2025-04-07 13:38:48 [INFO] Comparison progress: 100.0% (82,088/52,975)
+2025-04-07 13:38:49 [INFO] Comparison progress: 100.0% (84,736/52,975)
+2025-04-07 13:38:50 [INFO] Comparison progress: 100.0% (87,384/52,975)
+2025-04-07 13:38:51 [INFO] Comparison progress: 100.0% (90,032/52,975)
+2025-04-07 13:38:52 [INFO] Comparison progress: 100.0% (92,680/52,975)
+2025-04-07 13:38:53 [INFO] Comparison progress: 100.0% (95,328/52,975)
+2025-04-07 13:38:54 [INFO] Comparison progress: 100.0% (97,976/52,975)
+2025-04-07 13:38:55 [INFO] Found 6 potential repeated content blocks
+2025-04-07 13:38:55 [INFO] Classifying and adding repeated blocks
+2025-04-07 13:38:55 [INFO] Added 6 auto-detected blocks to the common blocks dictionary
+2025-04-07 13:38:55 [INFO] Block detection stats: Processed 0 chunks, found 0 potential blocks, added 0 blocks.
+2025-04-07 13:38:55 [INFO] Auto-detected 6 additional common blocks
+2025-04-07 13:38:55 [INFO] Total common blocks extracted: 8
+2025-04-07 13:38:55 [INFO] Extracted common blocks in 38.84 seconds
+2025-04-07 13:38:55 [INFO] Replacing common blocks in node content with references
+2025-04-07 13:38:55 [INFO] Prepared 8 blocks for replacement (sorted by size)
+2025-04-07 13:38:55 [INFO] Completed block replacement. Processed 30 nodes with content.
+2025-04-07 13:38:55 [INFO] Made 32 block replacements in total.
+2025-04-07 13:38:55 [INFO] Most frequently used blocks:
+2025-04-07 13:38:55 [INFO]   useful_links (useful_links): Used on 14 pages
+2025-04-07 13:38:55 [INFO]   navigation_2 (auto_block_2): Used on 4 pages
+2025-04-07 13:38:55 [INFO]   navigation_6 (auto_block_6): Used on 3 pages
+2025-04-07 13:38:55 [INFO]   navigation_5 (auto_block_5): Used on 3 pages
+2025-04-07 13:38:55 [INFO]   content_block_4 (auto_block_4): Used on 3 pages
+2025-04-07 13:38:55 [INFO]   content_block_3 (auto_block_3): Used on 3 pages
+2025-04-07 13:38:55 [INFO]   site_header (header): Used on 1 pages
+2025-04-07 13:38:55 [INFO]   content_block_1 (auto_block_1): Used on 1 pages
+2025-04-07 13:38:55 [INFO] Replaced common blocks in 0.00 seconds
+2025-04-07 13:38:55 [INFO] Exporting processed data to .\website_structure_path_based.json
+2025-04-07 13:38:55 [INFO] Content size reduction: 82,002 -> 78,850 bytes (3.8% savings)
+2025-04-07 13:38:55 [INFO] Export complete. Saved 30 nodes and 8 common blocks.
+2025-04-07 13:38:55 [INFO] Exported data in 0.00 seconds
+2025-04-07 13:38:55 [INFO] Processing complete. Total time: 38.85 seconds
+2025-04-07 13:38:55 [INFO] Output saved to: .\website_structure_path_based.json
